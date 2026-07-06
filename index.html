@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="site_title">بداية هوم | للأدوات المنزلية</title>
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core Design System stylesheet -->
+  <link rel="stylesheet" href="assets/css/style.css">
+  
+  <style>
+    /* Home Page Specific CSS */
+    .hero-slider {
+      position: relative;
+      height: 520px;
+      overflow: hidden;
+      margin-bottom: 60px;
+      background-color: var(--primary-dark);
+      color: white;
+    }
+    
+    .hero-slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+      background-size: cover;
+      background-position: center;
+    }
+    
+    .hero-slide.active {
+      opacity: 1;
+      z-index: 1;
+    }
+    
+    .hero-slide::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(27, 59, 54, 0.8) 0%, rgba(18, 40, 36, 0.4) 100%);
+    }
+    
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 600px;
+      padding: 40px;
+    }
+    
+    .hero-title {
+      font-size: 48px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 20px;
+    }
+    
+    .hero-subtitle {
+      font-size: 18px;
+      margin-bottom: 30px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .slider-dots {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: var(--radius-full);
+      background-color: rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .dot.active {
+      background-color: var(--accent);
+      width: 28px;
+    }
+    
+    /* Section Layouts */
+    .section {
+      padding: 60px 0;
+    }
+    
+    .section-title-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 40px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+    
+    .section-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      position: relative;
+    }
+    
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -18px;
+      width: 60px;
+      height: 3px;
+      background-color: var(--accent);
+    }
+    
+    html[dir="rtl"] .section-title::after { right: 0; }
+    html[dir="ltr"] .section-title::after { left: 0; }
+    
+    .section-link {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 15px;
+    }
+    
+    .section-link:hover {
+      color: var(--primary);
+      transform: translateX(-4px);
+    }
+    
+    html[dir="ltr"] .section-link:hover {
+      transform: translateX(4px);
+    }
+    
+    /* Why Choose Us cards */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+    
+    .feature-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      padding: 32px 24px;
+      border-radius: var(--radius-md);
+      text-align: center;
+      transition: var(--transition);
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent);
+    }
+    
+    .feature-icon {
+      font-size: 36px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    
+    .feature-name {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: var(--primary);
+    }
+    
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    
+    /* Testimonials styles */
+    .testimonial-card {
+      background-color: white;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .testi-stars {
+      color: #FFC107;
+      margin-bottom: 12px;
+    }
+    
+    .testi-text {
+      font-style: italic;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    
+    .testi-author {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--primary);
+    }
+    
+    .testi-title {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    /* Newsletter styles */
+    .newsletter-section {
+      background-color: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 80px 24px;
+      border-radius: var(--radius-lg);
+      margin-top: 40px;
+    }
+    
+    .newsletter-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    
+    .newsletter-subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 32px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .newsletter-form {
+      display: flex;
+      max-width: 500px;
+      margin: 0 auto;
+      gap: 12px;
+    }
+    
+    .newsletter-form input {
+      flex-grow: 1;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      background-color: white;
+      color: var(--text);
+    }
+    
+    @media (max-width: 992px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 576px) {
+      .hero-slider { height: 400px; }
+      .hero-title { font-size: 32px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .newsletter-form { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header Container -->
+  <header id="global-header"></header>
+
+  <!-- Hero Banner Slider -->
+  <section class="hero-slider">
+    <!-- Slide 1 -->
+    <div class="hero-slide active" style="background-image: url('https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80')">
+      <div class="container">
+        <div class="hero-content fade-in">
+          <h1 class="hero-title" data-i18n="hero_t1">بداية جديدة.. لبيت مميز</h1>
+          <p class="hero-subtitle" data-i18n="hero_st1">اكتشف تشكيلتنا الفاخرة من مستلزمات المنزل العصري بلمسة فنية وجودة مصرية لا تضاهى.</p>
+          <a href="pages/products.html" class="btn btn-secondary" data-i18n="hero_btn">تسوق الآن</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Slide 2 -->
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=80')">
+      <div class="container">
+        <div class="hero-content">
+          <h1 class="hero-title" data-i18n="hero_t2">غرف نوم تشع دفئاً وراحة</h1>
+          <p class="hero-subtitle" data-i18n="hero_st2">أطقم ملاءات قطنية فاخرة ١٠٠٪ ووسائد طبية تناسب احتياجاتك لنوم عميق وهادئ.</p>
+          <a href="pages/products.html?category=bedroom" class="btn btn-secondary" data-i18n="hero_btn">تسوق الآن</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Slide 3 -->
+    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80')">
+      <div class="container">
+        <div class="hero-content">
+          <h1 class="hero-title" data-i18n="hero_t3">أواني طهي وأطقم طعام راقية</h1>
+          <p class="hero-subtitle" data-i18n="hero_st3">اجعل أوقات العشاء لحظات لا تُنسى مع أطقم السيراميك الحجرية المصممة بعناية فائقة.</p>
+          <a href="pages/products.html?category=kitchen" class="btn btn-secondary" data-i18n="hero_btn">تسوق الآن</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="slider-dots" id="slider-dots">
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </section>
+
+  <main class="container">
+    
+    <!-- 1. Categories Section -->
+    <section class="section">
+      <div class="section-title-wrapper">
+        <h2 class="section-title" data-i18n="home_cat_title">تسوق بالأقسام</h2>
+      </div>
+      <div class="grid grid-4" id="categories-container" style="grid-template-columns: repeat(5, 1fr);">
+        <!-- Dynamically injected via JS -->
+      </div>
+    </section>
+
+    <!-- 2. Featured Products Section -->
+    <section class="section">
+      <div class="section-title-wrapper">
+        <h2 class="section-title" data-i18n="home_feat_title">منتجات مميزة</h2>
+        <a href="pages/products.html" class="section-link"><span data-i18n="nav_categories">عرض الكل</span> <i class="fa-solid fa-arrow-left"></i></a>
+      </div>
+      <div class="grid grid-4" id="featured-products-container">
+        <!-- Dynamic Cards -->
+      </div>
+    </section>
+
+    <!-- 3. Best Sellers Section -->
+    <section class="section">
+      <div class="section-title-wrapper">
+        <h2 class="section-title" data-i18n="nav_bestsellers">الأكثر مبيعاً</h2>
+        <a href="pages/products.html?filter=best-sellers" class="section-link"><span data-i18n="nav_categories">عرض الكل</span> <i class="fa-solid fa-arrow-left"></i></a>
+      </div>
+      <div class="grid grid-4" id="bestsellers-products-container">
+        <!-- Dynamic Cards -->
+      </div>
+    </section>
+
+    <!-- 4. New Arrivals Section -->
+    <section class="section">
+      <div class="section-title-wrapper">
+        <h2 class="section-title" data-i18n="nav_newarrivals">وصل حديثاً</h2>
+        <a href="pages/products.html?filter=new-arrivals" class="section-link"><span data-i18n="nav_categories">عرض الكل</span> <i class="fa-solid fa-arrow-left"></i></a>
+      </div>
+      <div class="grid grid-4" id="newarrivals-products-container">
+        <!-- Dynamic Cards -->
+      </div>
+    </section>
+
+    <!-- 5. Why Choose BIDAYA HOME Section -->
+    <section class="section">
+      <div class="section-title-wrapper" style="justify-content: center; text-align: center;">
+        <h2 class="section-title" data-i18n="about_why_title">لماذا تختار بداية هوم؟</h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-award"></i></div>
+          <h3 class="feature-name" data-i18n="choose_t1">جودة متميزة</h3>
+          <p class="feature-desc" data-i18n="choose_d1">جميع منتجاتنا مصنعة من أجود الخامات وتخضع لمعايير فحص جودة صارمة.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-tags"></i></div>
+          <h3 class="feature-name" data-i18n="choose_t2">أسعار عادلة</h3>
+          <p class="feature-desc" data-i18n="choose_d2">نقدم أسعاراً تنافسية مع عروض مستمرة على مدار السنة لتناسب ميزانيتك.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-solid fa-truck-fast"></i></div>
+          <h3 class="feature-name" data-i18n="choose_t3">شحن سريع وسهل</h3>
+          <p class="feature-desc" data-i18n="choose_d3">نشحن لكافة المحافظات ونلتزم بمواعيد التسليم مع تغليف آمن.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fa-brands fa-whatsapp"></i></div>
+          <h3 class="feature-name" data-i18n="choose_t4">تواصل مباشر</h3>
+          <p class="feature-desc" data-i18n="choose_d4">متابعة طلبك وسرعة التواصل معنا بكل سهولة عبر تطبيق واتساب.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Testimonials Section -->
+    <section class="section">
+      <div class="section-title-wrapper">
+        <h2 class="section-title" data-i18n="testi_title_section">آراء عملائنا</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="testimonial-card">
+          <div class="testi-stars">
+            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+          </div>
+          <p class="testi-text">"طقم الملاءات قطن ممتاز وناعم جداً، والألوان مطابقة تماماً للصور. التوصيل كان سريع خلال يومين فقط للقاهرة. بالتأكيد سأطلب مجدداً."</p>
+          <div class="testi-author">منى أحمد</div>
+          <div class="testi-title">عميلة من الجيزة</div>
+        </div>
+        
+        <div class="testimonial-card">
+          <div class="testi-stars">
+            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+          </div>
+          <p class="testi-text">"طلبت طقم أواني العشاء السيراميك والتغليف كان ممتاز ومقاوم للكسر. جودة السيراميك رائعة وسهل التنظيف. خدمة العملاء على واتساب محترمين جداً."</p>
+          <div class="testi-author">طارق مصطفى</div>
+          <div class="testi-title">عميل من الإسكندرية</div>
+        </div>
+        
+        <div class="testimonial-card">
+          <div class="testi-stars">
+            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>
+          </div>
+          <p class="testi-text">"الكرسي المخملي يجنن وشكله شيك وفخم جداً في الصالون. البطانة مريحة والأرجل قوية واللون رائع. شكراً بداية هوم على التعامل الراقي."</p>
+          <div class="testi-author">سارة يوسف</div>
+          <div class="testi-title">عميلة من أكتوبر</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Newsletter Section -->
+    <section class="newsletter-section">
+      <h2 class="newsletter-title" data-i18n="news_title">اشترك في النشرة البريدية</h2>
+      <p class="newsletter-subtitle" data-i18n="news_subtitle">كن أول من يعلم بخصوماتنا الجديدة وأحدث المنتجات التي تصل إلى معارضنا.</p>
+      <form class="newsletter-form" id="newsletter-form">
+        <input type="email" placeholder="بريدك الإلكتروني" required>
+        <button type="submit" class="btn btn-secondary" data-i18n="news_btn">اشتراك</button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- Global Footer Container -->
+  <footer id="global-footer"></footer>
+
+  <!-- Page Loader Logic -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!window.BIDAYA_DATA) return;
+      
+      const { categories, products } = window.BIDAYA_DATA;
+      const lang = window.BIDAYA_APP ? window.BIDAYA_APP.currentLang() : "ar";
+      
+      // 1. Render Categories Carousel
+      const catContainer = document.getElementById("categories-container");
+      if (catContainer) {
+        catContainer.innerHTML = categories.map(cat => `
+          <div class="category-card" onclick="window.location.href='pages/products.html?category=${cat.id}'">
+            <div class="category-icon-wrapper flex-center">
+              <i class="fa-solid ${cat.icon}"></i>
+            </div>
+            <div class="category-name">${lang === "ar" ? cat.nameAr : cat.nameEn}</div>
+          </div>
+        `).join('');
+      }
+      
+      // Helper function to build Product Card HTML
+      function createProductCardHTML(p) {
+        const name = lang === "ar" ? p.nameAr : p.nameEn;
+        const viewText = lang === "ar" ? "التفاصيل" : "Details";
+        const addText = lang === "ar" ? "أضف للسلة" : "Add to Cart";
+        const isOutOfStock = p.stock === "out-of-stock";
+        const badgeHTML = p.discount ? `<div class="badge-discount">${p.discount}% ${lang === "ar" ? "خصم" : "OFF"}</div>` : '';
+        const outBadgeHTML = isOutOfStock ? `<div class="badge-out">${lang === "ar" ? "نفد" : "SOLD OUT"}</div>` : '';
+        
+        return `
+          <div class="product-card">
+            <div class="card-img-wrapper">
+              <img src="${p.image}" alt="${name}" loading="lazy">
+              ${badgeHTML}
+              ${outBadgeHTML}
+            </div>
+            <div class="card-info">
+              <div class="card-category">${p.category}</div>
+              <a href="pages/products-details.html?id=${p.id}" class="card-name">${name}</a>
+              <div class="card-price-container">
+                <span class="price-current">${p.price} EGP</span>
+                ${p.oldPrice ? `<span class="price-old">${p.oldPrice} EGP</span>` : ''}
+              </div>
+              <div class="card-actions">
+                <a href="pages/products-details.html?id=${p.id}" class="btn btn-outline" style="padding: 10px 16px; font-size:13px;">${viewText}</a>
+                <button class="btn btn-primary" style="padding: 10px 16px; font-size:13px;" ${isOutOfStock ? "disabled" : ""} onclick="BIDAYA_APP.cart.add('${p.id}', 1)">
+                  <i class="fa-solid fa-cart-plus"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      // 2. Render Featured
+      const featContainer = document.getElementById("featured-products-container");
+      if (featContainer) {
+        const featured = products.filter(p => p.featured).slice(0, 4);
+        featContainer.innerHTML = featured.map(p => createProductCardHTML(p)).join('');
+      }
+      
+      // 3. Render Bestsellers
+      const bestContainer = document.getElementById("bestsellers-products-container");
+      if (bestContainer) {
+        const bestsellers = products.filter(p => p.bestSeller).slice(0, 4);
+        bestContainer.innerHTML = bestsellers.map(p => createProductCardHTML(p)).join('');
+      }
+      
+      // 4. Render New Arrivals
+      const newContainer = document.getElementById("newarrivals-products-container");
+      if (newContainer) {
+        const newArrivals = products.filter(p => p.newArrival).slice(0, 4);
+        newContainer.innerHTML = newArrivals.map(p => createProductCardHTML(p)).join('');
+      }
+
+      // Hero Slider logic
+      let currentSlide = 0;
+      const slides = document.querySelectorAll(".hero-slide");
+      const dots = document.querySelectorAll(".dot");
+      
+      function showSlide(index) {
+        slides.forEach(s => s.classList.remove("active"));
+        dots.forEach(d => d.classList.remove("active"));
+        
+        slides[index].classList.add("active");
+        dots[index].classList.add("active");
+      }
+      
+      dots.forEach((dot, idx) => {
+        dot.addEventListener("click", () => {
+          currentSlide = idx;
+          showSlide(currentSlide);
+        });
+      });
+      
+      setInterval(() => {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+      }, 5000);
+
+      // Handle Newsletter Submit
+      document.getElementById("newsletter-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const msg = lang === "ar" ? "شكراً لاشتراكك في نشرتنا الإخبارية!" : "Thank you for subscribing to our newsletter!";
+        BIDAYA_APP.showToast(msg, "success");
+        e.target.reset();
+      });
+
+      // Update values when language changes
+      window.addEventListener("langChanged", (e) => {
+        const newLang = e.detail.lang;
+        window.location.reload(); // Quick refresh to update data bindings
+      });
+    });
+  </script>
+</body>
+</html>

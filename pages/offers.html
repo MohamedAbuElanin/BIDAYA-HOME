@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="nav_offers">العروض والخصومات | بداية هوم</title>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core stylesheet -->
+  <link rel="stylesheet" href="../assets/css/style.css">
+  
+  <style>
+    /* Offers Page Specific CSS */
+    .offers-banner {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 60px 40px;
+      margin-top: 24px;
+      margin-bottom: 50px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(197, 168, 128, 0.2);
+    }
+    
+    .offers-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(197, 168, 128, 0.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    
+    .offers-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    
+    .offers-subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.85);
+      margin-bottom: 32px;
+    }
+    
+    /* Countdown Timer styles */
+    .countdown-container {
+      display: inline-flex;
+      gap: 16px;
+      direction: ltr; /* keep timer LTR for consistency */
+    }
+    
+    .time-block {
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1.5px solid var(--accent);
+      border-radius: var(--radius-md);
+      min-width: 80px;
+      padding: 12px 6px;
+      text-align: center;
+      backdrop-filter: blur(4px);
+    }
+    
+    .time-num {
+      font-size: 28px;
+      font-weight: 800;
+      color: white;
+      display: block;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    
+    .time-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    
+    @media (max-width: 576px) {
+      .offers-banner { padding: 40px 20px; }
+      .offers-title { font-size: 26px; }
+      .countdown-container { gap: 8px; }
+      .time-block { min-width: 60px; padding: 8px 4px; }
+      .time-num { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header id="global-header"></header>
+
+  <main class="container" style="padding-top: 30px;">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="../index.html" data-i18n="nav_home">الرئيسية</a>
+      <span class="breadcrumb-separator">/</span>
+      <span data-i18n="nav_offers">العروض والخصومات</span>
+    </div>
+
+    <!-- Promotional Header Banner -->
+    <div class="offers-banner">
+      <h1 class="offers-title" data-i18n="offers_title">أقوى العروض والخصومات</h1>
+      <p class="offers-subtitle" data-i18n="offers_subtitle">استمتع بخصومات حصرية ولفترة محدودة على أرقى المنتجات المنزلية</p>
+      
+      <div style="margin-bottom: 12px; font-weight:700; font-size:14px; text-transform:uppercase; color: white;" data-i18n="offers_ends">ينتهي العرض خلال:</div>
+      
+      <!-- Countdown timer -->
+      <div class="countdown-container" id="countdown-timer">
+        <div class="time-block">
+          <span class="time-num" id="days-val">00</span>
+          <span class="time-label" id="days-label">Days</span>
+        </div>
+        <div class="time-block">
+          <span class="time-num" id="hours-val">00</span>
+          <span class="time-label" id="hours-label">Hours</span>
+        </div>
+        <div class="time-block">
+          <span class="time-num" id="mins-val">00</span>
+          <span class="time-label" id="mins-label">Mins</span>
+        </div>
+        <div class="time-block">
+          <span class="time-num" id="secs-val">00</span>
+          <span class="time-label" id="secs-label">Secs</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Discounted Products list -->
+    <div class="grid grid-4" id="offers-products-grid" style="margin-top: 40px;">
+      <!-- Injected dynamically -->
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer id="global-footer"></footer>
+
+  <!-- Scripts -->
+  <script src="../js/products-data.js"></script>
+  <script src="../js/main.js"></script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!window.BIDAYA_DATA) return;
+
+      const { products } = window.BIDAYA_DATA;
+      const lang = window.BIDAYA_APP ? window.BIDAYA_APP.currentLang() : "ar";
+
+      // 1. Populate discounted products
+      const offersGrid = document.getElementById("offers-products-grid");
+      const discounted = products.filter(p => p.discount && p.discount > 0);
+
+      if (discounted.length === 0) {
+        offersGrid.className = "flex-center";
+        offersGrid.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-tags empty-state-icon"></i>
+            <h3 class="empty-state-title">لا توجد عروض نشطة حالياً</h3>
+            <p style="color:var(--text-muted); margin-bottom: 24px;">ترقبونا قريباً للحصول على أقوى الخصومات والتخفيضات الحصرية!</p>
+            <a href="products.html" class="btn btn-primary" data-i18n="cart_continue">تصفح جميع المنتجات</a>
+          </div>
+        `;
+      } else {
+        offersGrid.className = "grid grid-4";
+        offersGrid.innerHTML = discounted.map(p => {
+          const name = lang === "ar" ? p.nameAr : p.nameEn;
+          const viewText = lang === "ar" ? "التفاصيل" : "Details";
+          const isOutOfStock = p.stock === "out-of-stock";
+          const badgeHTML = `<div class="badge-discount">${p.discount}% ${lang === "ar" ? "خصم" : "OFF"}</div>`;
+          const outBadgeHTML = isOutOfStock ? `<div class="badge-out">${lang === "ar" ? "نفد" : "SOLD OUT"}</div>` : '';
+          
+          return `
+            <div class="product-card slide-up">
+              <div class="card-img-wrapper">
+                <img src="${p.image}" alt="${name}" loading="lazy">
+                ${badgeHTML}
+                ${outBadgeHTML}
+              </div>
+              <div class="card-info">
+                <div class="card-category">${p.category}</div>
+                <a href="products-details.html?id=${p.id}" class="card-name">${name}</a>
+                <div class="card-price-container">
+                  <span class="price-current">${p.price} EGP</span>
+                  ${p.oldPrice ? `<span class="price-old">${p.oldPrice} EGP</span>` : ''}
+                </div>
+                <div class="card-actions">
+                  <a href="products-details.html?id=${p.id}" class="btn btn-outline" style="padding: 10px 16px; font-size:13px;">${viewText}</a>
+                  <button class="btn btn-primary" style="padding: 10px 16px; font-size:13px;" ${isOutOfStock ? "disabled" : ""} onclick="BIDAYA_APP.cart.add('${p.id}', 1)">
+                    <i class="fa-solid fa-cart-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. Countdown Timer logic: Dynamic 3 days target from now
+      // This guarantees the timer is always active and counting down in previews.
+      let targetTime = localStorage.getItem("offers_target_date");
+      if (!targetTime) {
+        targetTime = new Date().getTime() + (3 * 24 * 60 * 60 * 1000); // 3 days in ms
+        localStorage.setItem("offers_target_date", targetTime);
+      } else {
+        // If stored time has passed, reset it
+        if (new Date().getTime() > parseInt(targetTime)) {
+          targetTime = new Date().getTime() + (3 * 24 * 60 * 60 * 1000);
+          localStorage.setItem("offers_target_date", targetTime);
+        }
+      }
+
+      const daysVal = document.getElementById("days-val");
+      const hoursVal = document.getElementById("hours-val");
+      const minsVal = document.getElementById("mins-val");
+      const secsVal = document.getElementById("secs-val");
+
+      const daysLabel = document.getElementById("days-label");
+      const hoursLabel = document.getElementById("hours-label");
+      const minsLabel = document.getElementById("mins-label");
+      const secsLabel = document.getElementById("secs-label");
+
+      // Translate labels based on lang
+      if (lang === "ar") {
+        daysLabel.textContent = "يوم";
+        hoursLabel.textContent = "ساعة";
+        minsLabel.textContent = "دقيقة";
+        secsLabel.textContent = "ثانية";
+      }
+
+      function updateCountdown() {
+        const now = new Date().getTime();
+        const difference = parseInt(targetTime) - now;
+
+        if (difference <= 0) {
+          // Timer finished, reset to another 3 days for continuous preview
+          const newTarget = new Date().getTime() + (3 * 24 * 60 * 60 * 1000);
+          localStorage.setItem("offers_target_date", newTarget);
+          targetTime = newTarget;
+          return;
+        }
+
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        daysVal.textContent = days.toString().padStart(2, '0');
+        hoursVal.textContent = hours.toString().padStart(2, '0');
+        minsVal.textContent = minutes.toString().padStart(2, '0');
+        secsVal.textContent = seconds.toString().padStart(2, '0');
+      }
+
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+    });
+  </script>
+</body>
+</html>

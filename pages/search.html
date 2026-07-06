@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="search_results_for">نتائج البحث | بداية هوم</title>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core stylesheet -->
+  <link rel="stylesheet" href="../assets/css/style.css">
+  
+  <style>
+    .search-layout {
+      margin-top: 30px;
+    }
+    
+    .search-box-large {
+      max-width: 600px;
+      margin: 0 auto 40px auto;
+      position: relative;
+    }
+    
+    .search-box-large input {
+      width: 100%;
+      padding: 16px 24px;
+      padding-inline-start: 54px;
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      background-color: white;
+    }
+    
+    .search-box-large input:focus {
+      border-color: var(--border-focus);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .search-box-large i {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+    
+    html[dir="rtl"] .search-box-large i {
+      right: 20px;
+    }
+    
+    html[dir="ltr"] .search-box-large i {
+      left: 20px;
+    }
+    
+    .search-headline {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header id="global-header"></header>
+
+  <main class="container" style="padding-top: 30px; min-height: 70vh;">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="../index.html" data-i18n="nav_home">الرئيسية</a>
+      <span class="breadcrumb-separator">/</span>
+      <span data-i18n="search_results_for">نتائج البحث</span>
+    </div>
+
+    <div class="search-layout">
+      <!-- Search Input box on page -->
+      <form class="search-box-large" id="main-search-form">
+        <input type="text" id="main-search-input" placeholder="ابحث عن منتجات لبيتك..." data-i18n-placeholder="search_placeholder">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </form>
+
+      <!-- Headline -->
+      <h2 class="search-headline">
+        <span data-i18n="search_results_for">نتائج البحث عن:</span>
+        <span id="search-query-text" style="color: var(--accent);">"..."</span>
+      </h2>
+
+      <!-- Grid -->
+      <div class="grid grid-4" id="search-results-grid">
+        <!-- Injected dynamic results -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer id="global-footer"></footer>
+
+  <!-- Scripts -->
+  <script src="../js/products-data.js"></script>
+  <script src="../js/main.js"></script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!window.BIDAYA_DATA) return;
+
+      const { products } = window.BIDAYA_DATA;
+      const lang = window.BIDAYA_APP ? window.BIDAYA_APP.currentLang() : "ar";
+
+      // 1. Get query parameter from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const query = urlParams.get("q") || "";
+
+      // Update text in input and headline
+      const searchInput = document.getElementById("main-search-input");
+      if (searchInput) searchInput.value = query;
+
+      const queryTextEl = document.getElementById("search-query-text");
+      if (queryTextEl) queryTextEl.textContent = `"${query}"`;
+
+      // 2. Filter products registry
+      let results = [];
+      if (query.trim() !== "") {
+        const cleanQuery = query.toLowerCase().trim();
+        results = products.filter(p => {
+          const nameEn = p.nameEn.toLowerCase();
+          const nameAr = p.nameAr.toLowerCase();
+          const descEn = p.descriptionEn.toLowerCase();
+          const descAr = p.descriptionAr.toLowerCase();
+          const cat = p.category.toLowerCase();
+          
+          return nameEn.includes(cleanQuery) || 
+                 nameAr.includes(cleanQuery) || 
+                 descEn.includes(cleanQuery) || 
+                 descAr.includes(cleanQuery) || 
+                 cat.includes(cleanQuery);
+        });
+      }
+
+      // 3. Render grid
+      const grid = document.getElementById("search-results-grid");
+      if (results.length === 0) {
+        grid.className = "flex-center";
+        grid.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-face-frown empty-state-icon"></i>
+            <h3 class="empty-state-title" data-i18n="search_no_results">${lang === "ar" ? "لم نجد أي منتجات تطابق بحثك." : "No products matched your search."}</h3>
+            <p style="color:var(--text-muted); margin-bottom: 24px;">يرجى مراجعة التهجئة أو البحث بكلمات أبسط (مثل: سرير، كرسي، فوط).</p>
+            <a href="products.html" class="btn btn-primary" data-i18n="cart_continue">تصفح المنتجات</a>
+          </div>
+        `;
+      } else {
+        grid.className = "grid grid-4";
+        grid.innerHTML = results.map(p => {
+          const name = lang === "ar" ? p.nameAr : p.nameEn;
+          const viewText = lang === "ar" ? "التفاصيل" : "Details";
+          const isOutOfStock = p.stock === "out-of-stock";
+          const badgeHTML = p.discount ? `<div class="badge-discount">${p.discount}% ${lang === "ar" ? "خصم" : "OFF"}</div>` : '';
+          const outBadgeHTML = isOutOfStock ? `<div class="badge-out">${lang === "ar" ? "نفد" : "SOLD OUT"}</div>` : '';
+          
+          return `
+            <div class="product-card slide-up">
+              <div class="card-img-wrapper">
+                <img src="${p.image}" alt="${name}" loading="lazy">
+                ${badgeHTML}
+                ${outBadgeHTML}
+              </div>
+              <div class="card-info">
+                <div class="card-category">${p.category}</div>
+                <a href="products-details.html?id=${p.id}" class="card-name">${name}</a>
+                <div class="card-price-container">
+                  <span class="price-current">${p.price} EGP</span>
+                  ${p.oldPrice ? `<span class="price-old">${p.oldPrice} EGP</span>` : ''}
+                </div>
+                <div class="card-actions">
+                  <a href="products-details.html?id=${p.id}" class="btn btn-outline" style="padding: 10px 16px; font-size:13px;">${viewText}</a>
+                  <button class="btn btn-primary" style="padding: 10px 16px; font-size:13px;" ${isOutOfStock ? "disabled" : ""} onclick="BIDAYA_APP.cart.add('${p.id}', 1)">
+                    <i class="fa-solid fa-cart-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Handle search submission on this page
+      document.getElementById("main-search-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const val = searchInput.value.trim();
+        if (val !== "") {
+          window.location.href = `search.html?q=${encodeURIComponent(val)}`;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

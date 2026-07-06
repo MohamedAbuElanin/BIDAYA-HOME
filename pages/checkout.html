@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="cart_checkout">إتمام الطلب | بداية هوم</title>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core stylesheet -->
+  <link rel="stylesheet" href="../assets/css/style.css">
+  
+  <style>
+    /* Checkout Page Specific CSS */
+    .checkout-layout {
+      display: grid;
+      grid-template-columns: 1.8fr 1.2fr;
+      gap: 30px;
+      margin-top: 30px;
+    }
+    
+    .checkout-form-section {
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+    }
+    
+    .checkout-subtitle {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 24px;
+      border-bottom: 1.5px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+    
+    .payment-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    
+    .payment-option-card {
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .payment-option-card:hover, .payment-option-card.active {
+      border-color: var(--accent);
+      background-color: rgba(197, 168, 128, 0.05);
+    }
+    
+    .payment-option-card input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+    }
+    
+    .payment-option-info {
+      flex-grow: 1;
+    }
+    
+    .payment-option-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+    }
+    
+    .payment-option-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    /* Summary items list */
+    .summary-products-list {
+      max-height: 240px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+    
+    .summary-product-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    
+    .summary-product-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    /* Processing Loader Modal */
+    .processing-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0,0,0,0.6);
+      backdrop-filter: blur(5px);
+      z-index: 10000;
+      color: white;
+      text-align: center;
+    }
+    
+    .processing-spinner {
+      font-size: 50px;
+      color: var(--accent);
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      100% { transform: rotate(-360deg); }
+    }
+    
+    /* Order Success Page overlay */
+    .success-container {
+      text-align: center;
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      max-width: 600px;
+      margin: 40px auto;
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .success-icon-wrapper {
+      width: 80px;
+      height: 80px;
+      background-color: rgba(46, 125, 50, 0.1);
+      color: var(--success);
+      font-size: 40px;
+      border-radius: var(--radius-full);
+      margin: 0 auto 24px auto;
+    }
+    
+    @media (max-width: 992px) {
+      .checkout-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header id="global-header"></header>
+
+  <main class="container" style="padding-top: 30px; min-height: 70vh;">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="../index.html" data-i18n="nav_home">الرئيسية</a>
+      <span class="breadcrumb-separator">/</span>
+      <a href="cart.html" data-i18n="cart_title">عربة التسوق</a>
+      <span class="breadcrumb-separator">/</span>
+      <span data-i18n="cart_checkout">إتمام الطلب</span>
+    </div>
+
+    <!-- Main View Switcher -->
+    <div id="checkout-main-content">
+      <h1 style="font-weight: 800; font-size:28px; color:var(--primary); margin-bottom: 10px;" data-i18n="cart_checkout">إتمام الطلب</h1>
+      
+      <div class="checkout-layout">
+        
+        <!-- Form Details -->
+        <form class="checkout-form-section" id="checkout-form" novalidate>
+          
+          <!-- 1. Customer Information -->
+          <div class="checkout-subtitle" data-i18n="contact_info_title">بيانات العميل</div>
+          
+          <div class="grid grid-2">
+            <div class="form-group" id="group-name">
+              <label for="bill-name" data-i18n="checkout_name">الاسم الكامل *</label>
+              <input type="text" id="bill-name" class="form-control" placeholder="أدخل اسمك ثلاثي على الأقل" required>
+              <span class="error-msg" id="err-name" data-i18n="val_name">يرجى إدخال الاسم كاملاً</span>
+            </div>
+            
+            <div class="form-group" id="group-phone">
+              <label for="bill-phone" data-i18n="checkout_phone">رقم الهاتف بالتفصيل *</label>
+              <input type="tel" id="bill-phone" class="form-control" placeholder="مثال: 01012345678" required>
+              <span class="error-msg" id="err-phone" data-i18n="val_phone">يرجى إدخال رقم هاتف مصري صحيح</span>
+            </div>
+          </div>
+          
+          <!-- 2. Shipping details -->
+          <div class="checkout-subtitle" style="margin-top: 20px;" data-i18n="cart_shipping">عنوان التوصيل</div>
+          
+          <div class="grid grid-2">
+            <div class="form-group" id="group-gov">
+              <label for="bill-gov" data-i18n="checkout_gov">المحافظة *</label>
+              <select id="bill-gov" class="form-control" required>
+                <option value="" disabled selected data-i18n="checkout_gov">-- اختر المحافظة --</option>
+                <!-- Filled dynamically -->
+              </select>
+              <span class="error-msg" id="err-gov" data-i18n="val_gov">يرجى اختيار المحافظة</span>
+            </div>
+            
+            <div class="form-group" id="group-city">
+              <label for="bill-city" data-i18n="checkout_city">المدينة / المنطقة *</label>
+              <input type="text" id="bill-city" class="form-control" placeholder="أدخل اسم المدينة أو الحي" required>
+              <span class="error-msg" id="err-city" data-i18n="val_city">يرجى إدخال المدينة</span>
+            </div>
+          </div>
+          
+          <div class="form-group" id="group-address">
+            <label for="bill-address" data-i18n="checkout_address">العنوان بالتفصيل *</label>
+            <textarea id="bill-address" class="form-control" rows="3" placeholder="الشارع، رقم العمارة، رقم الطابق، الشقة" required></textarea>
+            <span class="error-msg" id="err-address" data-i18n="val_address">يرجى إدخال العنوان بالتفصيل</span>
+          </div>
+          
+          <div class="form-group">
+            <label for="bill-landmark" data-i18n="checkout_landmark">علامة مميزة (اختياري)</label>
+            <input type="text" id="bill-landmark" class="form-control" placeholder="مثال: بجوار مسجد النور أو أمام الصيدلية">
+          </div>
+          
+          <!-- 3. Payment details -->
+          <div class="checkout-subtitle" style="margin-top: 20px;" data-i18n="checkout_payment">طريقة الدفع</div>
+          <div class="payment-options">
+            <div class="payment-option-card active" onclick="selectPaymentMethod('cod', this)">
+              <input type="radio" name="payment" id="pay-cod" value="cod" checked>
+              <div class="payment-option-info">
+                <div class="payment-option-title" data-i18n="checkout_payment_cod">الدفع عند الاستلام (COD)</div>
+                <div class="payment-option-desc">ادفع نقداً عند استلام طلبك أمام باب البيت.</div>
+              </div>
+            </div>
+            
+            <div class="payment-option-card" onclick="selectPaymentMethod('instapay', this)">
+              <input type="radio" name="payment" id="pay-instapay" value="instapay">
+              <div class="payment-option-info">
+                <div class="payment-option-title" data-i18n="checkout_payment_instapay">عبر تطبيق إنستا باي (InstaPay)</div>
+                <div class="payment-option-desc">حول القيمة لحسابنا في إنستا باي قبل الشحن لتأكيد الطلب السريع.</div>
+              </div>
+            </div>
+            
+            <div class="payment-option-card" onclick="selectPaymentMethod('wallet', this)">
+              <input type="radio" name="payment" id="pay-wallet" value="wallet">
+              <div class="payment-option-info">
+                <div class="payment-option-title" data-i18n="checkout_payment_wallet">محفظة إلكترونية (فودافون كاش...)</div>
+                <div class="payment-option-desc">حول القيمة لمحفظتنا الإلكترونية لتأكيد شحن الطلب فوراً.</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="bill-notes" data-i18n="checkout_notes">ملاحظات إضافية على الطلب</label>
+            <textarea id="bill-notes" class="form-control" rows="3" placeholder="مواعيد التوصيل المفضلة أو أي تعليمات خاصة للشحن"></textarea>
+          </div>
+          
+        </form>
+        
+        <!-- Order Summary panel -->
+        <aside class="summary-panel">
+          <h3 class="summary-title" data-i18n="checkout_summary">ملخص الطلب</h3>
+          
+          <!-- Products scroll panel -->
+          <div class="summary-products-list" id="checkout-summary-items">
+            <!-- Dynamically populated -->
+          </div>
+          
+          <div class="summary-row">
+            <span data-i18n="cart_subtotal">المجموع الفرعي</span>
+            <span id="summary-subtotal" style="font-weight: 700;">0 EGP</span>
+          </div>
+          
+          <div class="summary-row">
+            <span data-i18n="cart_shipping">الشحن</span>
+            <span id="summary-shipping" style="font-weight: 700; color: var(--success);">0 EGP</span>
+          </div>
+          
+          <div class="summary-row total">
+            <span data-i18n="cart_total">المجموع الكلي</span>
+            <span id="summary-total">0 EGP</span>
+          </div>
+          
+          <button type="button" class="btn btn-secondary" id="submit-order-btn" style="width: 100%; margin-top: 30px; padding:16px;" onclick="validateAndSubmitOrder()">
+            <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i>
+            <span data-i18n="checkout_submit">تأكيد الطلب عبر واتساب</span>
+          </button>
+        </aside>
+        
+      </div>
+    </div>
+  </main>
+
+  <!-- Processing Modal Loader -->
+  <div class="processing-modal flex-center" id="processing-loader">
+    <div>
+      <i class="fa-solid fa-circle-notch processing-spinner"></i>
+      <h2 style="font-weight: 800; font-size:24px; margin-bottom:10px;">جاري حفظ الطلب...</h2>
+      <p style="opacity: 0.85;">يرجى عدم غلق الصفحة، نقوم الآن بتجهيز رسالة واتساب الخاصة بك...</p>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
+  <footer id="global-footer"></footer>
+
+  <!-- Firebase Compat Layer Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  
+  <!-- Scripts -->
+  <script src="../js/products-data.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../firebase/firebase-config.js"></script>
+  
+  <script>
+    let activeShippingFee = 0;
+    
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!window.BIDAYA_DATA || !window.BIDAYA_APP) return;
+
+      const { governorates, products } = window.BIDAYA_DATA;
+      const cartItems = BIDAYA_APP.cart.get();
+      const lang = BIDAYA_APP.currentLang();
+
+      // If cart is empty, redirect to cart page immediately
+      if (cartItems.length === 0) {
+        window.location.href = "cart.html";
+        return;
+      }
+
+      // 1. Fill Governorate select options
+      const govSelect = document.getElementById("bill-gov");
+      governorates.forEach(gov => {
+        const option = document.createElement("option");
+        option.value = gov.id;
+        option.textContent = lang === "ar" ? gov.nameAr : gov.nameEn;
+        govSelect.appendChild(option);
+      });
+
+      // Update shipping cost when governorate is chosen
+      govSelect.addEventListener("change", (e) => {
+        const govId = e.target.value;
+        const gov = governorates.find(g => g.id === govId);
+        if (gov) {
+          activeShippingFee = gov.shipping;
+          updateCheckoutPricing();
+        }
+      });
+
+      // 2. Render summary items list
+      const summaryItemsContainer = document.getElementById("checkout-summary-items");
+      summaryItemsContainer.innerHTML = cartItems.map(item => {
+        const prod = products.find(p => p.id === item.id);
+        if (!prod) return '';
+        const name = lang === "ar" ? prod.nameAr : prod.nameEn;
+        return `
+          <div class="summary-product-item">
+            <div>
+              <span style="font-weight: 700; color: var(--primary);">${item.qty}x</span>
+              <span style="color:var(--text); font-weight:600;">${name}</span>
+            </div>
+            <span style="font-weight: 700; flex-shrink:0; margin-inline-start: 16px;">${prod.price * item.qty} EGP</span>
+          </div>
+        `;
+      }).join('');
+
+      updateCheckoutPricing();
+    });
+
+    function updateCheckoutPricing() {
+      const subtotal = BIDAYA_APP.cart.total();
+      document.getElementById("summary-subtotal").textContent = `${subtotal} EGP`;
+      document.getElementById("summary-shipping").textContent = `${activeShippingFee} EGP`;
+      document.getElementById("summary-total").textContent = `${subtotal + activeShippingFee} EGP`;
+    }
+
+    function selectPaymentMethod(method, element) {
+      document.querySelectorAll(".payment-option-card").forEach(c => c.classList.remove("active"));
+      element.classList.add("active");
+      document.getElementById(`pay-${method}`).checked = true;
+    }
+
+    // Validation & Order Submission Flow
+    function validateAndSubmitOrder() {
+      const lang = BIDAYA_APP.currentLang();
+      const val = BIDAYA_APP.translations[lang];
+
+      const nameInput = document.getElementById("bill-name");
+      const phoneInput = document.getElementById("bill-phone");
+      const govSelect = document.getElementById("bill-gov");
+      const cityInput = document.getElementById("bill-city");
+      const addressInput = document.getElementById("bill-address");
+      const notesInput = document.getElementById("bill-notes");
+      const landmarkInput = document.getElementById("bill-landmark");
+      const paymentInput = document.querySelector('input[name="payment"]:checked');
+
+      // Clear all previous validation states
+      document.querySelectorAll(".form-group").forEach(g => g.classList.remove("error", "success"));
+
+      let isValid = true;
+      let firstErrorElement = null;
+
+      function setError(input, errText) {
+        isValid = false;
+        const group = input.closest(".form-group");
+        group.classList.add("error");
+        if (!firstErrorElement) firstErrorElement = input;
+      }
+
+      function setSuccess(input) {
+        const group = input.closest(".form-group");
+        group.classList.add("success");
+      }
+
+      // Name: At least 3 words, and minimum 10 chars
+      const nameVal = nameInput.value.trim();
+      const wordCount = nameVal.split(/\s+/).filter(w => w.length > 0).length;
+      if (nameVal.length < 8 || wordCount < 3) {
+        setError(nameInput);
+      } else {
+        setSuccess(nameInput);
+      }
+
+      // Phone: Egyptian standard (11 digits, starts with 010, 011, 012, 015)
+      const phoneVal = phoneInput.value.trim();
+      const phoneRegex = /^01[0125][0-9]{8}$/;
+      if (!phoneRegex.test(phoneVal)) {
+        setError(phoneInput);
+      } else {
+        setSuccess(phoneInput);
+      }
+
+      // Governorate
+      if (!govSelect.value) {
+        setError(govSelect);
+      } else {
+        setSuccess(govSelect);
+      }
+
+      // City
+      if (cityInput.value.trim().length < 3) {
+        setError(cityInput);
+      } else {
+        setSuccess(cityInput);
+      }
+
+      // Address
+      if (addressInput.value.trim().length < 10) {
+        setError(addressInput);
+      } else {
+        setSuccess(addressInput);
+      }
+
+      if (!isValid) {
+        if (firstErrorElement) {
+          firstErrorElement.focus();
+          firstErrorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        BIDAYA_APP.showToast(lang === "ar" ? "يرجى مراجعة وتصحيح الحقول المحددة باللون الأحمر" : "Please fill all required fields correctly", "danger");
+        return;
+      }
+
+      // Compile Order details
+      const subtotal = BIDAYA_APP.cart.total();
+      const govText = govSelect.options[govSelect.selectedIndex].text;
+      const totalAmount = subtotal + activeShippingFee;
+
+      const orderPayload = {
+        customer: {
+          name: nameVal,
+          phone: phoneVal,
+          govId: govSelect.value,
+          govName: govText,
+          city: cityInput.value.trim(),
+          address: addressInput.value.trim(),
+          landmark: landmarkInput.value.trim(),
+          notes: notesInput.value.trim()
+        },
+        items: BIDAYA_APP.cart.get(),
+        paymentMethod: paymentInput.value,
+        pricing: {
+          subtotal: subtotal,
+          shipping: activeShippingFee,
+          total: totalAmount
+        }
+      };
+
+      // Show loader modal
+      const loader = document.getElementById("processing-loader");
+      loader.style.display = "flex";
+
+      // Call Database Access Layer
+      window.BIDAYA_DB.saveOrder(orderPayload)
+        .then((orderId) => {
+          // Success! Build WhatsApp link
+          const waUrl = buildWhatsAppLink(orderId, orderPayload);
+          
+          // Clear cart
+          BIDAYA_APP.cart.clear();
+
+          // Animate page to Order Success state
+          renderOrderSuccessState(orderId, waUrl);
+          
+          // Trigger redirect
+          window.open(waUrl, "_blank");
+        })
+        .catch((err) => {
+          console.error("Order save critical failure:", err);
+          BIDAYA_APP.showToast(val["toast_order_error"], "danger");
+        })
+        .finally(() => {
+          loader.style.display = "none";
+        });
+    }
+
+    function buildWhatsAppLink(orderId, payload) {
+      const lang = BIDAYA_APP.currentLang();
+      const products = window.BIDAYA_DATA.products;
+
+      let msg = `*BIDAYA HOME - طلبيّة جديدة رقم ${orderId}*\n`;
+      msg += `--------------------------------------\n`;
+      msg += `*بيانات العميل:*\n`;
+      msg += `- الاسم: ${payload.customer.name}\n`;
+      msg += `- رقم الهاتف: ${payload.customer.phone}\n`;
+      msg += `- العنوان: ${payload.customer.address}، ${payload.customer.city}، ${payload.customer.govName}\n`;
+      if (payload.customer.landmark) {
+        msg += `- علامة مميزة: ${payload.customer.landmark}\n`;
+      }
+      
+      let payText = "الدفع عند الاستلام (COD)";
+      if (payload.paymentMethod === "instapay") payText = "إنستا باي (InstaPay)";
+      if (payload.paymentMethod === "wallet") payText = "محفظة إلكترونية";
+      
+      msg += `- طريقة الدفع: ${payText}\n`;
+      
+      if (payload.customer.notes) {
+        msg += `- ملاحظات: ${payload.customer.notes}\n`;
+      }
+      
+      msg += `\n*المنتجات المطلوبة:*\n`;
+      payload.items.forEach(item => {
+        const prod = products.find(p => p.id === item.id);
+        if (prod) {
+          const name = lang === "ar" ? prod.nameAr : prod.nameEn;
+          msg += `- ${item.qty}x ${name} (${prod.price} EGP)\n`;
+        }
+      });
+      
+      msg += `\n*تفاصيل التكلفة:*\n`;
+      msg += `- المجموع الفرعي: ${payload.pricing.subtotal} EGP\n`;
+      msg += `- مصاريف الشحن: ${payload.pricing.shipping} EGP\n`;
+      msg += `- *المجموع الكلي: ${payload.pricing.total} EGP*\n`;
+      msg += `--------------------------------------\n`;
+      msg += `شكراً للتسوق من بداية هوم. يرجى تأكيد استلام الطلب والشحن.`;
+
+      const encoded = encodeURIComponent(msg);
+      return `https://wa.me/${BIDAYA_APP.whatsappNumber}?text=${encoded}`;
+    }
+
+    function renderOrderSuccessState(orderId, waUrl) {
+      const container = document.getElementById("checkout-main-content");
+      const lang = BIDAYA_APP.currentLang();
+      
+      document.title = lang === "ar" ? "تم تأكيد طلبك | بداية هوم" : "Order Confirmed | BIDAYA HOME";
+
+      container.innerHTML = `
+        <div class="success-container fade-in">
+          <div class="success-icon-wrapper flex-center">
+            <i class="fa-solid fa-check"></i>
+          </div>
+          
+          <h2 style="font-weight: 800; font-size: 26px; color: var(--primary); margin-bottom: 12px;">
+            ${lang === "ar" ? "تم تسجيل طلبك بنجاح!" : "Your order was successfully registered!"}
+          </h2>
+          
+          <p style="color:var(--text-muted); margin-bottom: 24px; line-height: 1.8;">
+            لقد تم إنشاء طلبك برقم *${orderId}*. لقد قمنا بفتح نافذة جديدة للتواصل وتأكيد الشحن معك عبر واتساب. إذا لم تفتح النافذة تلقائياً، يمكنك النقر على الزر أدناه لمواصلة المحادثة معنا.
+          </p>
+          
+          <div style="display: flex; flex-direction: column; gap: 12px; max-width: 400px; margin: 0 auto;">
+            <a href="${waUrl}" target="_blank" class="btn btn-success" style="padding: 14px;">
+              <i class="fa-brands fa-whatsapp"></i>
+              <span>${lang === "ar" ? "افتح محادثة واتساب" : "Open WhatsApp Chat"}</span>
+            </a>
+            
+            <a href="../index.html" class="btn btn-outline" style="padding: 14px;">
+              <span>${lang === "ar" ? "العودة للرئيسية" : "Return to Home Page"}</span>
+            </a>
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

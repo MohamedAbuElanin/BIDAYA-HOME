@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="nav_categories">المنتجات | بداية هوم</title>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core stylesheet -->
+  <link rel="stylesheet" href="../assets/css/style.css">
+  
+  <style>
+    /* Catalog Specific CSS */
+    .catalog-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 30px;
+      margin-top: 24px;
+    }
+    
+    .filters-sidebar {
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      align-self: start;
+    }
+    
+    .filter-section {
+      margin-bottom: 28px;
+      border-bottom: 1.5px solid var(--border-color);
+      padding-bottom: 20px;
+    }
+    
+    .filter-section:last-child {
+      margin-bottom: 0;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    
+    .filter-title {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+    
+    .filter-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .filter-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .price-range-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    
+    .price-input {
+      width: 50%;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      font-size: 14px;
+    }
+    
+    /* Catalog Top Bar */
+    .catalog-top-bar {
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px 24px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    
+    .results-count {
+      font-weight: 600;
+      font-size: 15px;
+    }
+    
+    .sort-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .sort-select {
+      padding: 8px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-card);
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    /* Mobile Filter Drawer Button */
+    .mobile-filter-trigger {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--primary);
+      color: white;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    @media (max-width: 992px) {
+      .catalog-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .filters-sidebar {
+        display: none; /* Hide on mobile - will trigger via overlay */
+      }
+      
+      .filters-sidebar.open-mobile {
+        display: block;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        z-index: 1001;
+        width: 300px;
+        box-shadow: var(--shadow-lg);
+        overflow-y: auto;
+      }
+      
+      html[dir="rtl"] .filters-sidebar.open-mobile {
+        right: 0;
+      }
+      
+      html[dir="ltr"] .filters-sidebar.open-mobile {
+        left: 0;
+      }
+      
+      .mobile-filter-trigger {
+        display: inline-flex;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header id="global-header"></header>
+
+  <main class="container" style="padding-top: 30px;">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="../index.html" data-i18n="nav_home">الرئيسية</a>
+      <span class="breadcrumb-separator">/</span>
+      <span data-i18n="nav_categories">المنتجات</span>
+    </div>
+
+    <!-- Catalog Shell -->
+    <div class="catalog-layout">
+      
+      <!-- Filters Sidebar (Desktop or Mobile Slideout) -->
+      <aside class="filters-sidebar" id="catalog-sidebar">
+        <div class="flex-between" style="margin-bottom: 20px; border-bottom: 1.5px solid var(--border-color); padding-bottom: 10px;">
+          <h3 class="filter-title" data-i18n="filter_title" style="margin: 0;">تصفية المنتجات</h3>
+          <button class="mobile-only" id="close-filters-btn" style="cursor: pointer; font-size:18px;"><i class="fa-solid fa-times"></i></button>
+        </div>
+        
+        <!-- Category Filter -->
+        <div class="filter-section">
+          <h4 class="filter-title" data-i18n="filter_category">القسم</h4>
+          <ul class="filter-list" id="filter-categories-list">
+            <!-- Dynamic Category List -->
+          </ul>
+        </div>
+        
+        <!-- Price Filter -->
+        <div class="filter-section">
+          <h4 class="filter-title" data-i18n="filter_price">النطاق السعري</h4>
+          <div class="price-range-wrapper">
+            <input type="number" id="price-min" class="price-input" placeholder="0" min="0">
+            <span>-</span>
+            <input type="number" id="price-max" class="price-input" placeholder="10000" min="0">
+          </div>
+        </div>
+        
+        <!-- Availability Filter -->
+        <div class="filter-section">
+          <h4 class="filter-title" data-i18n="filter_availability">حالة التوفر</h4>
+          <ul class="filter-list">
+            <li>
+              <label class="control-check">
+                <input type="checkbox" id="filter-in-stock">
+                <span data-i18n="filter_instock">متوفر فقط</span>
+              </label>
+            </li>
+            <li>
+              <label class="control-check">
+                <input type="checkbox" id="filter-offers">
+                <span data-i18n="filter_discount">العروض والخصومات فقط</span>
+              </label>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- Reset Button -->
+        <button class="btn btn-outline" id="reset-filters-btn" style="width: 100%; margin-top: 10px;" data-i18n="sort_default">إعادة تعيين</button>
+      </aside>
+      
+      <!-- Catalog Grid & Top Bar -->
+      <section>
+        
+        <!-- Catalog Top Control Bar -->
+        <div class="catalog-top-bar">
+          <button class="mobile-filter-trigger" id="mobile-filter-btn">
+            <i class="fa-solid fa-sliders"></i>
+            <span data-i18n="filter_title">تصفية</span>
+          </button>
+          
+          <div class="results-count">
+            <span id="results-count-num">0</span> <span data-i18n="site_title">منتجات متاحة</span>
+          </div>
+          
+          <div class="sort-wrapper">
+            <label for="sort-select" data-i18n="sort_title" style="font-weight: 600; font-size:14px;">ترتيب حسب:</label>
+            <select id="sort-select" class="sort-select">
+              <option value="default" data-i18n="sort_default">الافتراضي</option>
+              <option value="newest" data-i18n="sort_newest">الأحدث</option>
+              <option value="bestselling" data-i18n="sort_bestselling">الأكثر مبيعاً</option>
+              <option value="price-low" data-i18n="sort_price_low">السعر: من الأقل للأعلى</option>
+              <option value="price-high" data-i18n="sort_price_high">السعر: من الأعلى للأقل</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Product Catalog Grid -->
+        <div class="grid grid-3" id="catalog-products-grid">
+          <!-- Dynamically Injected Product Cards / Skeletons / Empty State -->
+        </div>
+        
+      </section>
+      
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer id="global-footer"></footer>
+
+  <!-- Scripts -->
+  <script src="../js/products-data.js"></script>
+  <script src="../js/main.js"></script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!window.BIDAYA_DATA) return;
+
+      const { products, categories } = window.BIDAYA_DATA;
+      let activeCategory = null;
+      let activeFilterParam = null; // 'best-sellers', 'new-arrivals'
+      
+      const lang = window.BIDAYA_APP ? window.BIDAYA_APP.currentLang() : "ar";
+      
+      // Parse query string parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      activeCategory = urlParams.get("category");
+      activeFilterParam = urlParams.get("filter");
+
+      // 1. Render categories checklist in sidebar
+      const catChecklist = document.getElementById("filter-categories-list");
+      if (catChecklist) {
+        catChecklist.innerHTML = `
+          <li>
+            <label class="control-check">
+              <input type="radio" name="cat-filter" value="all" ${!activeCategory ? "checked" : ""}>
+              <span data-i18n="filter_all">${lang === "ar" ? "الكل" : "All"}</span>
+            </label>
+          </li>
+          ` + categories.map(cat => `
+          <li>
+            <label class="control-check">
+              <input type="radio" name="cat-filter" value="${cat.id}" ${activeCategory === cat.id ? "checked" : ""}>
+              <span>${lang === "ar" ? cat.nameAr : cat.nameEn}</span>
+            </label>
+          </li>
+        `).join('');
+      }
+
+      // Check special filter inputs from URL parameters
+      if (activeFilterParam === "best-sellers") {
+        document.getElementById("sort-select").value = "bestselling";
+      } else if (activeFilterParam === "new-arrivals") {
+        document.getElementById("sort-select").value = "newest";
+      }
+
+      // 2. Main Filtering and Sorting logic
+      function applyFilters() {
+        // Collect UI filter selections
+        const selectedCatEl = document.querySelector('input[name="cat-filter"]:checked');
+        const selectedCat = selectedCatEl ? selectedCatEl.value : "all";
+        
+        const minPrice = parseFloat(document.getElementById("price-min").value) || 0;
+        const maxPrice = parseFloat(document.getElementById("price-max").value) || Infinity;
+        
+        const inStockOnly = document.getElementById("filter-in-stock").checked;
+        const offersOnly = document.getElementById("filter-offers").checked;
+        
+        const sortBy = document.getElementById("sort-select").value;
+
+        // Apply filters
+        let filtered = [...products];
+
+        // 1. Category
+        if (selectedCat !== "all") {
+          filtered = filtered.filter(p => p.category === selectedCat);
+        }
+
+        // 2. Price Limits
+        filtered = filtered.filter(p => p.price >= minPrice && p.price <= maxPrice);
+
+        // 3. Availability
+        if (inStockOnly) {
+          filtered = filtered.filter(p => p.stock === "in-stock");
+        }
+
+        // 4. Offers
+        if (offersOnly) {
+          filtered = filtered.filter(p => p.discount && p.discount > 0);
+        }
+
+        // 5. Apply sorting
+        if (sortBy === "newest") {
+          // Sort items where newArrival is true first
+          filtered.sort((a, b) => (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0));
+        } else if (sortBy === "bestselling") {
+          // Sort items where bestSeller is true first
+          filtered.sort((a, b) => (b.bestSeller ? 1 : 0) - (a.bestSeller ? 1 : 0));
+        } else if (sortBy === "price-low") {
+          filtered.sort((a, b) => a.price - b.price);
+        } else if (sortBy === "price-high") {
+          filtered.sort((a, b) => b.price - a.price);
+        }
+
+        renderGrid(filtered);
+      }
+
+      // Render product grid
+      function renderGrid(items) {
+        const grid = document.getElementById("catalog-products-grid");
+        const resultsNum = document.getElementById("results-count-num");
+        
+        resultsNum.textContent = items.length;
+
+        if (items.length === 0) {
+          grid.className = "flex-center";
+          grid.innerHTML = `
+            <div class="empty-state">
+              <i class="fa-solid fa-box-open empty-state-icon"></i>
+              <h3 class="empty-state-title" data-i18n="search_no_results">${lang === "ar" ? "لم نجد أي منتجات تطابق بحثك." : "No products matched your search."}</h3>
+              <p style="color:var(--text-muted); margin-bottom: 24px;">حاول تغيير خيارات التصفية أو البحث عن منتج آخر.</p>
+              <button class="btn btn-primary" id="grid-reset-btn">${lang === "ar" ? "عرض جميع المنتجات" : "View All Products"}</button>
+            </div>
+          `;
+          
+          document.getElementById("grid-reset-btn").addEventListener("click", resetAllFilters);
+          return;
+        }
+
+        grid.className = "grid grid-3";
+        grid.innerHTML = items.map(p => {
+          const name = lang === "ar" ? p.nameAr : p.nameEn;
+          const viewText = lang === "ar" ? "التفاصيل" : "Details";
+          const isOutOfStock = p.stock === "out-of-stock";
+          const badgeHTML = p.discount ? `<div class="badge-discount">${p.discount}% ${lang === "ar" ? "خصم" : "OFF"}</div>` : '';
+          const outBadgeHTML = isOutOfStock ? `<div class="badge-out">${lang === "ar" ? "نفد" : "SOLD OUT"}</div>` : '';
+          
+          return `
+            <div class="product-card slide-up">
+              <div class="card-img-wrapper">
+                <img src="${p.image}" alt="${name}" loading="lazy">
+                ${badgeHTML}
+                ${outBadgeHTML}
+              </div>
+              <div class="card-info">
+                <div class="card-category">${p.category}</div>
+                <a href="products-details.html?id=${p.id}" class="card-name">${name}</a>
+                <div class="card-price-container">
+                  <span class="price-current">${p.price} EGP</span>
+                  ${p.oldPrice ? `<span class="price-old">${p.oldPrice} EGP</span>` : ''}
+                </div>
+                <div class="card-actions">
+                  <a href="products-details.html?id=${p.id}" class="btn btn-outline" style="padding: 10px 16px; font-size:13px;">${viewText}</a>
+                  <button class="btn btn-primary" style="padding: 10px 16px; font-size:13px;" ${isOutOfStock ? "disabled" : ""} onclick="BIDAYA_APP.cart.add('${p.id}', 1)">
+                    <i class="fa-solid fa-cart-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function resetAllFilters() {
+        const allRadio = document.querySelector('input[name="cat-filter"][value="all"]');
+        if (allRadio) allRadio.checked = true;
+        
+        document.getElementById("price-min").value = "";
+        document.getElementById("price-max").value = "";
+        document.getElementById("filter-in-stock").checked = false;
+        document.getElementById("filter-offers").checked = false;
+        document.getElementById("sort-select").value = "default";
+        
+        applyFilters();
+      }
+
+      // Attach event listeners
+      document.querySelectorAll('input[name="cat-filter"]').forEach(radio => {
+        radio.addEventListener("change", applyFilters);
+      });
+      document.getElementById("price-min").addEventListener("input", applyFilters);
+      document.getElementById("price-max").addEventListener("input", applyFilters);
+      document.getElementById("filter-in-stock").addEventListener("change", applyFilters);
+      document.getElementById("filter-offers").addEventListener("change", applyFilters);
+      document.getElementById("sort-select").addEventListener("change", applyFilters);
+      document.getElementById("reset-filters-btn").addEventListener("click", resetAllFilters);
+
+      // Mobile Sidebar filters popup controls
+      const mobileFilterBtn = document.getElementById("mobile-filter-btn");
+      const sidebar = document.getElementById("catalog-sidebar");
+      const closeFiltersBtn = document.getElementById("close-filters-btn");
+
+      if (mobileFilterBtn && sidebar) {
+        mobileFilterBtn.addEventListener("click", () => {
+          sidebar.classList.add("open-mobile");
+          const overlay = document.getElementById("mobile-drawer-overlay");
+          if (overlay) overlay.classList.add("open");
+        });
+
+        const closeSidebar = () => {
+          sidebar.classList.remove("open-mobile");
+          const overlay = document.getElementById("mobile-drawer-overlay");
+          if (overlay) overlay.classList.remove("open");
+        };
+
+        if (closeFiltersBtn) closeFiltersBtn.addEventListener("click", closeSidebar);
+        const overlay = document.getElementById("mobile-drawer-overlay");
+        if (overlay) overlay.addEventListener("click", closeSidebar);
+      }
+
+      // Initial Filter Run
+      applyFilters();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="contact_title">اتصل بنا | بداية هوم</title>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core stylesheet -->
+  <link rel="stylesheet" href="../assets/css/style.css">
+  
+  <style>
+    /* Contact Page Specific CSS */
+    .contact-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 40px;
+      margin-top: 30px;
+    }
+    
+    .contact-info-panel {
+      background-color: var(--primary);
+      color: white;
+      border-radius: var(--radius-md);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+    
+    .contact-info-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    
+    .contact-icon-box {
+      width: 44px;
+      height: 44px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    
+    .contact-info-text h4 {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+    
+    .contact-info-text p, .contact-info-text a {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    
+    .contact-form-section {
+      background-color: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 40px;
+    }
+    
+    .map-container {
+      margin-top: 50px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      height: 350px;
+    }
+    
+    @media (max-width: 768px) {
+      .contact-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header id="global-header"></header>
+
+  <main class="container" style="padding-top: 30px;">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="../index.html" data-i18n="nav_home">الرئيسية</a>
+      <span class="breadcrumb-separator">/</span>
+      <span data-i18n="contact_title">اتصل بنا</span>
+    </div>
+
+    <h1 style="font-weight: 800; font-size: 28px; color: var(--primary); margin-bottom: 10px;" data-i18n="contact_title">اتصل بنا</h1>
+
+    <div class="contact-layout">
+      <!-- Contact Info Sidebar -->
+      <aside class="contact-info-panel">
+        <h3 style="font-size: 22px; font-weight:800; color: var(--accent);" data-i18n="contact_info_title">معلومات الاتصال</h3>
+        <p style="font-size:14px; opacity: 0.85; line-height:1.7;">يسعدنا دائماً تواصلك معنا والإجابة على أي استفسارات تخص منتجاتنا وطلباتك.</p>
+        
+        <div class="contact-info-item">
+          <div class="contact-icon-box"><i class="fa-solid fa-phone"></i></div>
+          <div class="contact-info-text">
+            <h4>رقم الهاتف</h4>
+            <p>01000000000</p>
+          </div>
+        </div>
+        
+        <div class="contact-info-item">
+          <div class="contact-icon-box"><i class="fa-brands fa-whatsapp"></i></div>
+          <div class="contact-info-text">
+            <h4>تواصل واتساب</h4>
+            <a href="https://wa.me/201000000000" target="_blank">01000000000</a>
+          </div>
+        </div>
+        
+        <div class="contact-info-item">
+          <div class="contact-icon-box"><i class="fa-solid fa-envelope"></i></div>
+          <div class="contact-info-text">
+            <h4>البريد الإلكتروني</h4>
+            <p>info@bidayahome.com</p>
+          </div>
+        </div>
+        
+        <div class="contact-info-item">
+          <div class="contact-icon-box"><i class="fa-solid fa-location-dot"></i></div>
+          <div class="contact-info-text">
+            <h4 data-i18n="footer_contact">المعرض الرئيسي</h4>
+            <p data-i18n="footer_address">القاهرة، جمهورية مصر العربية</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Message Form -->
+      <section class="contact-form-section">
+        <h3 style="font-size: 20px; font-weight:800; color: var(--primary); margin-bottom: 24px;" data-i18n="contact_form_title">أرسل لنا رسالة</h3>
+        
+        <form id="contact-us-form" novalidate>
+          <div class="form-group" id="c-group-name">
+            <label for="contact-name" data-i18n="contact_name">الاسم *</label>
+            <input type="text" id="contact-name" class="form-control" placeholder="أدخل اسمك بالكامل" required>
+            <span class="error-msg">يرجى إدخال اسمك</span>
+          </div>
+          
+          <div class="form-group" id="c-group-phone">
+            <label for="contact-phone" data-i18n="checkout_phone">رقم الهاتف *</label>
+            <input type="tel" id="contact-phone" class="form-control" placeholder="مثال: 01012345678" required>
+            <span class="error-msg" data-i18n="val_phone">يرجى إدخال رقم هاتف مصري صحيح</span>
+          </div>
+          
+          <div class="form-group" id="c-group-message">
+            <label for="contact-message" data-i18n="contact_message">الرسالة *</label>
+            <textarea id="contact-message" class="form-control" rows="5" placeholder="اكتب استفسارك أو رسالتك بالتفصيل هنا..." required></textarea>
+            <span class="error-msg">يرجى كتابة نص الرسالة</span>
+          </div>
+          
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding:14px;" data-i18n="contact_submit">إرسال الرسالة</button>
+        </form>
+      </section>
+    </div>
+
+    <!-- Google Maps Mock Frame -->
+    <div class="map-container">
+      <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d110502.61185563914!2d31.188358249999998!3d30.0594838!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14583fa60b21beeb%3A0x79dfb296fc90d3b!2sCairo%2C%20Cairo%20Governorate!5e0!3m2!1sen!2seg!4v1700000000000!5m2!1sen!2seg" 
+              width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer id="global-footer"></footer>
+
+  <!-- Scripts -->
+  <script src="../js/products-data.js"></script>
+  <script src="../js/main.js"></script>
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("contact-us-form");
+      const lang = window.BIDAYA_APP ? window.BIDAYA_APP.currentLang() : "ar";
+      
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        
+        const nameInput = document.getElementById("contact-name");
+        const phoneInput = document.getElementById("contact-phone");
+        const msgInput = document.getElementById("contact-message");
+
+        // Clear validation
+        document.querySelectorAll(".form-group").forEach(g => g.classList.remove("error", "success"));
+
+        let isValid = true;
+
+        if (nameInput.value.trim().length < 3) {
+          isValid = false;
+          nameInput.closest(".form-group").classList.add("error");
+        } else {
+          nameInput.closest(".form-group").classList.add("success");
+        }
+
+        const phoneRegex = /^01[0125][0-9]{8}$/;
+        if (!phoneRegex.test(phoneInput.value.trim())) {
+          isValid = false;
+          phoneInput.closest(".form-group").classList.add("error");
+        } else {
+          phoneInput.closest(".form-group").classList.add("success");
+        }
+
+        if (msgInput.value.trim().length < 8) {
+          isValid = false;
+          msgInput.closest(".form-group").classList.add("error");
+        } else {
+          msgInput.closest(".form-group").classList.add("success");
+        }
+
+        if (isValid) {
+          const successMsg = BIDAYA_APP.translations[lang]["contact_success"];
+          BIDAYA_APP.showToast(successMsg, "success");
+          form.reset();
+          document.querySelectorAll(".form-group").forEach(g => g.classList.remove("success"));
+        }
+      });
+    });
+  </script>
+</body>
+</html>
