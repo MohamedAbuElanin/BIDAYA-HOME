@@ -4,363 +4,220 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title data-i18n="site_title">بداية هوم | للأدوات المنزلية</title>
-  <!-- FontAwesome for Premium Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Core Design System stylesheet -->
+  <meta name="description" content="بداية هوم - وجهتك الأولى لتسوق مستلزمات المنزل والأدوات المنزلية الفاخرة في مصر.">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="assets/css/style.css">
-  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
   <style>
-    /* Home Page Specific CSS */
-    .hero-slider {
-      position: relative;
-      height: 520px;
-      overflow: hidden;
-      margin-bottom: 60px;
-      background-color: var(--primary-dark);
-      color: white;
-    }
-    
-    .hero-slide {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      align-items: center;
-      opacity: 0;
-      transition: opacity 1s ease-in-out;
-      background-size: cover;
-      background-position: center;
-    }
-    
-    .hero-slide.active {
-      opacity: 1;
-      z-index: 1;
-    }
-    
-    .hero-slide::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(27, 59, 54, 0.8) 0%, rgba(18, 40, 36, 0.4) 100%);
-    }
-    
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      max-width: 600px;
-      padding: 40px;
-    }
-    
-    .hero-title {
-      font-size: 48px;
-      font-weight: 800;
-      line-height: 1.2;
-      margin-bottom: 20px;
-    }
-    
-    .hero-subtitle {
-      font-size: 18px;
-      margin-bottom: 30px;
-      color: rgba(255, 255, 255, 0.9);
-    }
-    
-    .slider-dots {
-      position: absolute;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 3;
-      display: flex;
-      gap: 10px;
-    }
-    
-    .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: var(--radius-full);
-      background-color: rgba(255, 255, 255, 0.4);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-    
-    .dot.active {
-      background-color: var(--accent);
-      width: 28px;
-    }
-    
-    /* Section Layouts */
-    .section {
-      padding: 60px 0;
-    }
-    
-    .section-title-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 40px;
-      border-bottom: 2px solid var(--border-color);
-      padding-bottom: 16px;
-    }
-    
-    .section-title {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--primary);
-      position: relative;
-    }
-    
-    .section-title::after {
-      content: '';
-      position: absolute;
-      bottom: -18px;
-      width: 60px;
-      height: 3px;
-      background-color: var(--accent);
-    }
-    
-    html[dir="rtl"] .section-title::after { right: 0; }
-    html[dir="ltr"] .section-title::after { left: 0; }
-    
-    .section-link {
-      font-weight: 600;
-      color: var(--accent);
-      font-size: 15px;
-    }
-    
-    .section-link:hover {
-      color: var(--primary);
-      transform: translateX(-4px);
-    }
-    
-    html[dir="ltr"] .section-link:hover {
-      transform: translateX(4px);
-    }
-    
-    /* Why Choose Us cards */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
-    }
-    
-    .feature-card {
-      background: white;
-      border: 1px solid var(--border-color);
-      padding: 32px 24px;
-      border-radius: var(--radius-md);
-      text-align: center;
-      transition: var(--transition);
-    }
-    
-    .feature-card:hover {
-      transform: translateY(-6px);
-      box-shadow: var(--shadow-md);
-      border-color: var(--accent);
-    }
-    
-    .feature-icon {
-      font-size: 36px;
-      color: var(--accent);
-      margin-bottom: 20px;
-    }
-    
-    .feature-name {
-      font-weight: 700;
-      font-size: 18px;
-      margin-bottom: 12px;
-      color: var(--primary);
-    }
-    
-    .feature-desc {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-    
-    /* Testimonials styles */
-    .testimonial-card {
-      background-color: white;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
-      padding: 24px;
-      box-shadow: var(--shadow-sm);
-    }
-    
-    .testi-stars {
-      color: #FFC107;
-      margin-bottom: 12px;
-    }
-    
-    .testi-text {
-      font-style: italic;
-      font-size: 14px;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-    
-    .testi-author {
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--primary);
-    }
-    
-    .testi-title {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    
-    /* Newsletter styles */
-    .newsletter-section {
-      background-color: var(--primary);
-      color: white;
-      text-align: center;
-      padding: 80px 24px;
-      border-radius: var(--radius-lg);
-      margin-top: 40px;
-    }
-    
-    .newsletter-title {
-      font-size: 32px;
-      font-weight: 800;
-      margin-bottom: 12px;
-    }
-    
-    .newsletter-subtitle {
-      font-size: 16px;
-      color: rgba(255, 255, 255, 0.85);
-      margin-bottom: 32px;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    
-    .newsletter-form {
-      display: flex;
-      max-width: 500px;
-      margin: 0 auto;
-      gap: 12px;
-    }
-    
-    .newsletter-form input {
-      flex-grow: 1;
-      padding: 14px 20px;
-      border-radius: var(--radius-md);
-      background-color: white;
-      color: var(--text);
-    }
-    
-    @media (max-width: 992px) {
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    
-    @media (max-width: 576px) {
-      .hero-slider { height: 400px; }
-      .hero-title { font-size: 32px; }
-      .features-grid { grid-template-columns: 1fr; }
-      .newsletter-form { flex-direction: column; }
-    }
+    .hero-slider { position:relative; height:580px; overflow:hidden; background-color:var(--primary-dark); color:white; }
+    .hero-slide { position:absolute; inset:0; display:flex; align-items:center; opacity:0; transition:opacity 1.2s ease-in-out; background-size:cover; background-position:center; background-repeat:no-repeat; }
+    .hero-slide.active { opacity:1; z-index:1; }
+    .hero-slide::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg, rgba(7,24,48,0.82) 0%, rgba(11,37,69,0.55) 55%, rgba(11,37,69,0.2) 100%); }
+    .hero-content { position:relative; z-index:2; max-width:640px; padding:40px 48px; }
+    .hero-tag { display:inline-flex; align-items:center; gap:8px; background:rgba(186,150,83,0.2); border:1px solid var(--accent); color:var(--accent); padding:6px 16px; border-radius:var(--radius-full); font-size:13px; font-weight:600; margin-bottom:20px; backdrop-filter:blur(4px); }
+    .hero-title { font-size:52px; font-weight:800; line-height:1.15; margin-bottom:20px; text-shadow:0 2px 20px rgba(0,0,0,0.3); }
+    .hero-subtitle { font-size:17px; margin-bottom:36px; color:rgba(255,255,255,0.9); line-height:1.7; max-width:520px; }
+    .hero-actions { display:flex; gap:16px; flex-wrap:wrap; }
+    .hero-btn-outline { display:inline-flex; align-items:center; gap:8px; padding:12px 28px; border-radius:var(--radius-md); border:2px solid rgba(255,255,255,0.6); color:white; font-weight:600; font-size:15px; transition:var(--transition); background:transparent; text-decoration:none; }
+    .hero-btn-outline:hover { background:rgba(255,255,255,0.15); border-color:white; }
+    .slider-dots { position:absolute; bottom:28px; left:50%; transform:translateX(-50%); z-index:3; display:flex; gap:10px; }
+    .dot { width:10px; height:10px; border-radius:var(--radius-full); background-color:rgba(255,255,255,0.4); cursor:pointer; transition:var(--transition); border:1.5px solid rgba(255,255,255,0.6); }
+    .dot.active { background-color:var(--accent); width:30px; border-color:var(--accent); }
+    .slider-arrow { position:absolute; top:50%; transform:translateY(-50%); z-index:3; width:48px; height:48px; border-radius:var(--radius-full); background:rgba(255,255,255,0.15); backdrop-filter:blur(6px); border:1.5px solid rgba(255,255,255,0.3); color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:var(--transition); }
+    .slider-arrow:hover { background:rgba(186,150,83,0.7); border-color:var(--accent); }
+    .slider-prev { left:24px; }
+    .slider-next { right:24px; }
+    .section { padding:70px 0; }
+    .section-tag { display:inline-block; background:rgba(var(--accent-rgb),0.12); color:var(--accent); border:1px solid rgba(var(--accent-rgb),0.3); padding:4px 16px; border-radius:var(--radius-full); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
+    .section-title-wrapper { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:40px; border-bottom:2px solid var(--border-color); padding-bottom:16px; }
+    .section-title { font-size:28px; font-weight:800; color:var(--primary); position:relative; }
+    .section-title::after { content:''; position:absolute; bottom:-18px; width:50px; height:3px; background:linear-gradient(90deg, var(--accent), transparent); border-radius:var(--radius-full); }
+    html[dir="rtl"] .section-title::after { right:0; }
+    html[dir="ltr"] .section-title::after { left:0; }
+    .section-link { font-weight:600; color:var(--accent); font-size:14px; display:inline-flex; align-items:center; gap:6px; transition:var(--transition); }
+    .section-link:hover { color:var(--primary); gap:10px; }
+    .stats-bar { background:linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color:white; padding:28px 0; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:0; }
+    .stat-item { text-align:center; padding:8px 24px; position:relative; }
+    .stat-item:not(:last-child)::after { content:''; position:absolute; top:10%; height:80%; width:1px; background:rgba(255,255,255,0.2); }
+    html[dir="rtl"] .stat-item:not(:last-child)::after { left:0; }
+    html[dir="ltr"] .stat-item:not(:last-child)::after { right:0; }
+    .stat-number { font-size:30px; font-weight:800; color:var(--accent); line-height:1; margin-bottom:4px; }
+    .stat-label { font-size:13px; color:rgba(255,255,255,0.8); }
+    .features-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:24px; }
+    .feature-card { background:white; border:1px solid var(--border-color); padding:36px 24px; border-radius:var(--radius-lg); text-align:center; transition:var(--transition); position:relative; overflow:hidden; }
+    .feature-card::before { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--primary), var(--accent)); transform:scaleX(0); transition:transform 0.4s ease; }
+    .feature-card:hover { transform:translateY(-8px); box-shadow:var(--shadow-md); border-color:transparent; }
+    .feature-card:hover::before { transform:scaleX(1); }
+    .feature-icon { width:72px; height:72px; border-radius:var(--radius-full); background:rgba(var(--primary-rgb),0.06); color:var(--primary); margin:0 auto 20px auto; display:flex; align-items:center; justify-content:center; font-size:30px; transition:var(--transition); }
+    .feature-card:hover .feature-icon { background:linear-gradient(135deg, var(--primary), var(--accent)); color:white; }
+    .feature-name { font-weight:700; font-size:17px; margin-bottom:12px; color:var(--primary); }
+    .feature-desc { font-size:14px; color:var(--text-muted); line-height:1.7; }
+    .testimonials-section { background:linear-gradient(135deg, #F8F6F0 0%, #FAF9F6 100%); }
+    .testimonial-card { background-color:white; border-radius:var(--radius-lg); border:1px solid var(--border-color); padding:28px; box-shadow:var(--shadow-sm); position:relative; transition:var(--transition); }
+    .testimonial-card:hover { box-shadow:var(--shadow-md); transform:translateY(-4px); }
+    .testi-quote { position:absolute; top:20px; font-size:56px; color:rgba(var(--accent-rgb),0.15); font-family:Georgia,serif; line-height:1; }
+    html[dir="rtl"] .testi-quote { right:20px; }
+    html[dir="ltr"] .testi-quote { left:20px; }
+    .testi-stars { color:#FFC107; margin-bottom:14px; display:flex; gap:3px; }
+    .testi-text { font-style:italic; font-size:14.5px; color:var(--text); margin-bottom:20px; line-height:1.8; }
+    .testi-author-row { display:flex; align-items:center; gap:12px; }
+    .testi-avatar { width:42px; height:42px; border-radius:var(--radius-full); background:linear-gradient(135deg, var(--primary), var(--accent)); display:flex; align-items:center; justify-content:center; color:white; font-size:16px; font-weight:700; flex-shrink:0; }
+    .testi-author { font-weight:700; font-size:15px; color:var(--primary); }
+    .testi-title { font-size:12px; color:var(--text-muted); }
+    .faq-container { max-width:820px; margin:0 auto; }
+    .faq-item { background:white; border:1px solid var(--border-color); border-radius:var(--radius-md); margin-bottom:16px; overflow:hidden; transition:var(--transition); }
+    .faq-item:hover { border-color:rgba(var(--accent-rgb),0.4); box-shadow:var(--shadow-sm); }
+    .faq-item.open { border-color:var(--accent); box-shadow:0 4px 20px rgba(var(--accent-rgb),0.12); }
+    .faq-question { width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 24px; cursor:pointer; background:none; border:none; text-align:inherit; font-size:15.5px; font-weight:600; color:var(--primary); transition:var(--transition); font-family:inherit; }
+    .faq-question:hover { background:rgba(var(--primary-rgb),0.02); }
+    .faq-question-text { flex:1; text-align:start; }
+    .faq-icon { width:32px; height:32px; border-radius:var(--radius-full); background:rgba(var(--primary-rgb),0.06); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; transition:var(--transition); }
+    .faq-item.open .faq-icon { background:var(--accent); color:white; transform:rotate(45deg); }
+    .faq-answer { display:none; padding:0 24px 24px; font-size:14.5px; color:var(--text-muted); line-height:1.8; border-top:1px solid var(--border-color); padding-top:16px; }
+    .faq-item.open .faq-answer { display:block; }
+    .newsletter-section { background:linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color:white; text-align:center; padding:88px 24px; border-radius:var(--radius-lg); margin-top:40px; position:relative; overflow:hidden; }
+    .newsletter-section::before { content:''; position:absolute; top:-50%; right:-20%; width:500px; height:500px; border-radius:var(--radius-full); background:rgba(255,255,255,0.03); }
+    .newsletter-section::after { content:''; position:absolute; bottom:-40%; left:-10%; width:350px; height:350px; border-radius:var(--radius-full); background:rgba(var(--accent-rgb),0.08); }
+    .newsletter-icon { width:64px; height:64px; border-radius:var(--radius-full); background:rgba(var(--accent-rgb),0.2); color:var(--accent); font-size:24px; margin:0 auto 20px auto; display:flex; align-items:center; justify-content:center; position:relative; z-index:1; }
+    .newsletter-title { font-size:34px; font-weight:800; margin-bottom:12px; position:relative; z-index:1; }
+    .newsletter-subtitle { font-size:16px; color:rgba(255,255,255,0.85); margin-bottom:36px; max-width:480px; margin-left:auto; margin-right:auto; position:relative; z-index:1; line-height:1.7; }
+    .newsletter-form { display:flex; max-width:500px; margin:0 auto; gap:12px; position:relative; z-index:1; }
+    .newsletter-form input { flex-grow:1; padding:14px 20px; border-radius:var(--radius-md); background-color:rgba(255,255,255,0.95); color:var(--text); font-size:14px; border:2px solid transparent; transition:var(--transition); font-family:inherit; }
+    .newsletter-form input:focus { border-color:var(--accent); outline:none; }
+    @media(max-width:992px){.features-grid{grid-template-columns:repeat(2,1fr)}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:768px){.hero-slider{height:460px}.hero-title{font-size:34px}.hero-content{padding:24px}.features-grid{grid-template-columns:1fr}.newsletter-form{flex-direction:column}}
+    @media(max-width:480px){.hero-slider{height:380px}.hero-title{font-size:28px}}
   </style>
 </head>
-<body>
-
-  <!-- Sticky Header Container -->
+<body data-page="home">
   <header id="global-header"></header>
 
-  <!-- Hero Banner Slider -->
-  <section class="hero-slider">
-    <!-- Slide 1 -->
-    <div class="hero-slide active" style="background-image: url('https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1200&q=80')">
-      <div class="container">
-        <div class="hero-content fade-in">
-          <h1 class="hero-title" data-i18n="hero_t1">بداية جديدة.. لبيت مميز</h1>
-          <p class="hero-subtitle" data-i18n="hero_st1">اكتشف تشكيلتنا الفاخرة من مستلزمات المنزل العصري بلمسة فنية وجودة مصرية لا تضاهى.</p>
-          <a href="pages/products.html" class="btn btn-secondary" data-i18n="hero_btn">تسوق الآن</a>
+  <!-- HERO SLIDER -->
+  <section class="hero-slider" aria-label="Hero Slider">
+    <div class="hero-slide active" style="background-image: url('images/banners/luxury-modern-apartment-with-elegant-interior-design-generated-by-ai.jpg')">
+      <div class="container"><div class="hero-content">
+        <div class="hero-tag"><i class="fa-solid fa-star"></i><span>بداية هوم - جودة لا تضاهى</span></div>
+        <h1 class="hero-title" data-i18n="hero_t1">بداية جديدة.. لبيت مميز</h1>
+        <p class="hero-subtitle" data-i18n="hero_st1">اكتشف تشكيلتنا الفاخرة من مستلزمات المنزل العصري بلمسة فنية وجودة مصرية لا تضاهى.</p>
+        <div class="hero-actions">
+          <a href="pages/products.html" class="btn btn-secondary" data-i18n="hero_btn"><i class="fa-solid fa-bag-shopping"></i>تسوق الآن</a>
+          <a href="pages/about.html" class="hero-btn-outline"><i class="fa-solid fa-circle-info"></i>من نحن</a>
         </div>
-      </div>
+      </div></div>
     </div>
-    
-    <!-- Slide 2 -->
-    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=80')">
-      <div class="container">
-        <div class="hero-content">
-          <h1 class="hero-title" data-i18n="hero_t2">غرف نوم تشع دفئاً وراحة</h1>
-          <p class="hero-subtitle" data-i18n="hero_st2">أطقم ملاءات قطنية فاخرة ١٠٠٪ ووسائد طبية تناسب احتياجاتك لنوم عميق وهادئ.</p>
-          <a href="pages/products.html?category=bedroom" class="btn btn-secondary" data-i18n="hero_btn">تسوق الآن</a>
+    <div class="hero-slide" style="background-image: url('images/banners/creative-fengshui-practice-bedroom-arrangement.jpg')">
+      <div class="container"><div class="hero-content">
+        <div class="hero-tag"><i class="fa-solid fa-moon"></i><span>مفروشات غرفة النوم</span></div>
+        <h1 class="hero-title" data-i18n="hero_t2">غرف نوم تشع دفئاً وراحة</h1>
+        <p class="hero-subtitle" data-i18n="hero_st2">أطقم ملاءات قطنية فاخرة ١٠٠٪ ووسائد طبية تناسب احتياجاتك لنوم عميق وهادئ.</p>
+        <div class="hero-actions">
+          <a href="pages/products.html?category=bedding" class="btn btn-secondary"><i class="fa-solid fa-bag-shopping"></i>تسوق الآن</a>
         </div>
-      </div>
+      </div></div>
     </div>
-    
-    <!-- Slide 3 -->
-    <div class="hero-slide" style="background-image: url('https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1200&q=80')">
-      <div class="container">
-        <div class="hero-content">
-          <h1 class="hero-title" data-i18n="hero_t3">أواني طهي وأطقم طعام راقية</h1>
-          <p class="hero-subtitle" data-i18n="hero_st3">اجعل أوقات العشاء لحظات لا تُنسى مع أطقم السيراميك الحجرية المصممة بعناية فائقة.</p>
-          <a href="pages/products.html?category=kitchen" class="btn btn-secondary" data-i18n="hero_btn">تسوق الآن</a>
+    <div class="hero-slide" style="background-image: url('images/banners/3d-rendering-white-minimal-kitchen-with-wood-decoration.jpg')">
+      <div class="container"><div class="hero-content">
+        <div class="hero-tag"><i class="fa-solid fa-utensils"></i><span>مجموعة المطبخ</span></div>
+        <h1 class="hero-title" data-i18n="hero_t3">أواني طهي وأطقم طعام راقية</h1>
+        <p class="hero-subtitle" data-i18n="hero_st3">اجعل أوقات العشاء لحظات لا تُنسى مع أطقم السيراميك الحجرية المصممة بعناية فائقة.</p>
+        <div class="hero-actions">
+          <a href="pages/products.html?category=kitchen" class="btn btn-secondary"><i class="fa-solid fa-bag-shopping"></i>تسوق الآن</a>
         </div>
-      </div>
+      </div></div>
     </div>
-    
+    <div class="hero-slide" style="background-image: url('images/banners/home-entryway-with-modern-furnishing-design.jpg')">
+      <div class="container"><div class="hero-content">
+        <div class="hero-tag"><i class="fa-solid fa-couch"></i><span>ديكور داخلي فاخر</span></div>
+        <h1 class="hero-title">تصميمات داخلية عصرية</h1>
+        <p class="hero-subtitle">حوّل منزلك إلى تحفة فنية مع مجموعتنا المختارة من قطع الديكور والأثاث المنزلي.</p>
+        <div class="hero-actions">
+          <a href="pages/products.html?category=home-decor" class="btn btn-secondary"><i class="fa-solid fa-bag-shopping"></i>تسوق الآن</a>
+        </div>
+      </div></div>
+    </div>
+    <div class="hero-slide" style="background-image: url('images/banners/indoor-modern-design-with-wooden-chair-vase-generated-by-ai.jpg')">
+      <div class="container"><div class="hero-content">
+        <div class="hero-tag"><i class="fa-solid fa-leaf"></i><span>إضاءة وتزيين</span></div>
+        <h1 class="hero-title">إضاءة مميزة وديكور أنيق</h1>
+        <p class="hero-subtitle">أضف روح الجمال لكل غرفة في بيتك مع تشكيلتنا الرائعة من الإضاءة والإكسسوارات.</p>
+        <div class="hero-actions">
+          <a href="pages/products.html?category=lighting" class="btn btn-secondary"><i class="fa-solid fa-bag-shopping"></i>استكشف الآن</a>
+        </div>
+      </div></div>
+    </div>
+    <button class="slider-arrow slider-prev" id="slider-prev" aria-label="السابق"><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="slider-arrow slider-next" id="slider-next" aria-label="التالي"><i class="fa-solid fa-chevron-left"></i></button>
     <div class="slider-dots" id="slider-dots">
-      <div class="dot active"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
+      <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
     </div>
   </section>
 
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item"><div class="stat-number" data-target="5000">0+</div><div class="stat-label">عميل سعيد</div></div>
+        <div class="stat-item"><div class="stat-number" data-target="1200">0+</div><div class="stat-label">منتج متوفر</div></div>
+        <div class="stat-item"><div class="stat-number" data-target="27">0+</div><div class="stat-label">محافظة توصيل</div></div>
+        <div class="stat-item"><div class="stat-number" data-target="98">0%</div><div class="stat-label">نسبة رضا العملاء</div></div>
+      </div>
+    </div>
+  </div>
+
   <main class="container">
-    
-    <!-- 1. Categories Section -->
-    <section class="section">
+
+    <!-- CATEGORIES -->
+    <section class="section" id="categories-section">
       <div class="section-title-wrapper">
         <h2 class="section-title" data-i18n="home_cat_title">تسوق بالأقسام</h2>
+        <a href="pages/products.html" class="section-link"><span>عرض الكل</span><i class="fa-solid fa-arrow-left"></i></a>
       </div>
-      <div class="grid grid-4" id="categories-container" style="grid-template-columns: repeat(5, 1fr);">
-        <!-- Dynamically injected via JS -->
-      </div>
+      <div class="grid grid-4" id="categories-container" style="grid-template-columns: repeat(5, 1fr);"></div>
     </section>
 
-    <!-- 2. Featured Products Section -->
-    <section class="section">
+    <!-- FEATURED PRODUCTS -->
+    <section class="section" id="featured-section">
       <div class="section-title-wrapper">
         <h2 class="section-title" data-i18n="home_feat_title">منتجات مميزة</h2>
-        <a href="pages/products.html" class="section-link"><span data-i18n="nav_categories">عرض الكل</span> <i class="fa-solid fa-arrow-left"></i></a>
+        <a href="pages/products.html" class="section-link"><span data-i18n="nav_categories">عرض الكل</span><i class="fa-solid fa-arrow-left"></i></a>
       </div>
-      <div class="grid grid-4" id="featured-products-container">
-        <!-- Dynamic Cards -->
-      </div>
+      <div class="grid grid-4" id="featured-products-container"></div>
     </section>
 
-    <!-- 3. Best Sellers Section -->
-    <section class="section">
+    <!-- BEST SELLERS -->
+    <section class="section" id="bestsellers-section">
       <div class="section-title-wrapper">
         <h2 class="section-title" data-i18n="nav_bestsellers">الأكثر مبيعاً</h2>
-        <a href="pages/products.html?filter=best-sellers" class="section-link"><span data-i18n="nav_categories">عرض الكل</span> <i class="fa-solid fa-arrow-left"></i></a>
+        <a href="pages/products.html?filter=best-sellers" class="section-link"><span data-i18n="nav_categories">عرض الكل</span><i class="fa-solid fa-arrow-left"></i></a>
       </div>
-      <div class="grid grid-4" id="bestsellers-products-container">
-        <!-- Dynamic Cards -->
-      </div>
+      <div class="grid grid-4" id="bestsellers-products-container"></div>
     </section>
 
-    <!-- 4. New Arrivals Section -->
-    <section class="section">
+    <!-- NEW ARRIVALS -->
+    <section class="section" id="newarrivals-section">
       <div class="section-title-wrapper">
         <h2 class="section-title" data-i18n="nav_newarrivals">وصل حديثاً</h2>
-        <a href="pages/products.html?filter=new-arrivals" class="section-link"><span data-i18n="nav_categories">عرض الكل</span> <i class="fa-solid fa-arrow-left"></i></a>
+        <a href="pages/products.html?filter=new-arrivals" class="section-link"><span data-i18n="nav_categories">عرض الكل</span><i class="fa-solid fa-arrow-left"></i></a>
       </div>
-      <div class="grid grid-4" id="newarrivals-products-container">
-        <!-- Dynamic Cards -->
-      </div>
+      <div class="grid grid-4" id="newarrivals-products-container"></div>
     </section>
 
-    <!-- 5. Why Choose BIDAYA HOME Section -->
-    <section class="section">
-      <div class="section-title-wrapper" style="justify-content: center; text-align: center;">
-        <h2 class="section-title" data-i18n="about_why_title">لماذا تختار بداية هوم؟</h2>
+    <!-- OFFERS -->
+    <section class="section" id="offers-section">
+      <div class="section-title-wrapper">
+        <h2 class="section-title" data-i18n="nav_offers">العروض</h2>
+        <a href="pages/offers.html" class="section-link"><span data-i18n="nav_offers">عرض الكل</span><i class="fa-solid fa-arrow-left"></i></a>
+      </div>
+      <div class="grid grid-4" id="offers-products-container"></div>
+    </section>
+
+    <!-- WHY BIDAYA HOME -->
+    <section class="section" id="features-section">
+      <div style="text-align:center; margin-bottom:50px;">
+        <span class="section-tag"><i class="fa-solid fa-award"></i>&nbsp;لماذا نحن</span>
+        <h2 class="section-title" style="font-size:32px; text-align:center;" data-i18n="about_why_title">لماذا تختار بداية هوم؟</h2>
       </div>
       <div class="features-grid">
         <div class="feature-card">
@@ -368,19 +225,16 @@
           <h3 class="feature-name" data-i18n="choose_t1">جودة متميزة</h3>
           <p class="feature-desc" data-i18n="choose_d1">جميع منتجاتنا مصنعة من أجود الخامات وتخضع لمعايير فحص جودة صارمة.</p>
         </div>
-        
         <div class="feature-card">
           <div class="feature-icon"><i class="fa-solid fa-tags"></i></div>
           <h3 class="feature-name" data-i18n="choose_t2">أسعار عادلة</h3>
           <p class="feature-desc" data-i18n="choose_d2">نقدم أسعاراً تنافسية مع عروض مستمرة على مدار السنة لتناسب ميزانيتك.</p>
         </div>
-        
         <div class="feature-card">
           <div class="feature-icon"><i class="fa-solid fa-truck-fast"></i></div>
           <h3 class="feature-name" data-i18n="choose_t3">شحن سريع وسهل</h3>
           <p class="feature-desc" data-i18n="choose_d3">نشحن لكافة المحافظات ونلتزم بمواعيد التسليم مع تغليف آمن.</p>
         </div>
-        
         <div class="feature-card">
           <div class="feature-icon"><i class="fa-brands fa-whatsapp"></i></div>
           <h3 class="feature-name" data-i18n="choose_t4">تواصل مباشر</h3>
@@ -389,43 +243,92 @@
       </div>
     </section>
 
-    <!-- 6. Testimonials Section -->
-    <section class="section">
-      <div class="section-title-wrapper">
-        <h2 class="section-title" data-i18n="testi_title_section">آراء عملائنا</h2>
-      </div>
-      <div class="grid grid-3">
-        <div class="testimonial-card">
-          <div class="testi-stars">
-            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-          </div>
-          <p class="testi-text">"طقم الملاءات قطن ممتاز وناعم جداً، والألوان مطابقة تماماً للصور. التوصيل كان سريع خلال يومين فقط للقاهرة. بالتأكيد سأطلب مجدداً."</p>
-          <div class="testi-author">منى أحمد</div>
-          <div class="testi-title">عميلة من الجيزة</div>
+    <!-- TESTIMONIALS -->
+    <section class="section testimonials-section" style="margin:0 -24px; padding:70px 24px;">
+      <div class="container">
+        <div style="text-align:center; margin-bottom:50px;">
+          <span class="section-tag"><i class="fa-solid fa-quote-left"></i>&nbsp;آراء العملاء</span>
+          <h2 class="section-title" style="font-size:32px; text-align:center;" data-i18n="testi_title_section">آراء عملائنا</h2>
         </div>
-        
-        <div class="testimonial-card">
-          <div class="testi-stars">
-            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+        <div class="grid grid-3" id="testimonials-grid">
+          <div class="testimonial-card">
+            <div class="testi-quote">"</div>
+            <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+            <p class="testi-text">"طقم الملاءات قطن ممتاز وناعم جداً، والألوان مطابقة تماماً للصور. التوصيل كان سريع خلال يومين فقط للقاهرة. بالتأكيد سأطلب مجدداً."</p>
+            <div class="testi-author-row"><div class="testi-avatar">م</div><div><div class="testi-author">منى أحمد</div><div class="testi-title"><i class="fa-solid fa-location-dot"></i> الجيزة</div></div></div>
           </div>
-          <p class="testi-text">"طلبت طقم أواني العشاء السيراميك والتغليف كان ممتاز ومقاوم للكسر. جودة السيراميك رائعة وسهل التنظيف. خدمة العملاء على واتساب محترمين جداً."</p>
-          <div class="testi-author">طارق مصطفى</div>
-          <div class="testi-title">عميل من الإسكندرية</div>
-        </div>
-        
-        <div class="testimonial-card">
-          <div class="testi-stars">
-            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>
+          <div class="testimonial-card">
+            <div class="testi-quote">"</div>
+            <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+            <p class="testi-text">"طلبت طقم أواني العشاء السيراميك والتغليف كان ممتاز ومقاوم للكسر. جودة السيراميك رائعة وسهل التنظيف. خدمة العملاء على واتساب محترمين جداً."</p>
+            <div class="testi-author-row"><div class="testi-avatar">ط</div><div><div class="testi-author">طارق مصطفى</div><div class="testi-title"><i class="fa-solid fa-location-dot"></i> الإسكندرية</div></div></div>
           </div>
-          <p class="testi-text">"الكرسي المخملي يجنن وشكله شيك وفخم جداً في الصالون. البطانة مريحة والأرجل قوية واللون رائع. شكراً بداية هوم على التعامل الراقي."</p>
-          <div class="testi-author">سارة يوسف</div>
-          <div class="testi-title">عميلة من أكتوبر</div>
+          <div class="testimonial-card">
+            <div class="testi-quote">"</div>
+            <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i></div>
+            <p class="testi-text">"الكرسي المخملي يجنن وشكله شيك وفخم جداً في الصالون. البطانة مريحة والأرجل قوية واللون رائع. شكراً بداية هوم على التعامل الراقي."</p>
+            <div class="testi-author-row"><div class="testi-avatar">س</div><div><div class="testi-author">سارة يوسف</div><div class="testi-title"><i class="fa-solid fa-location-dot"></i> 6 أكتوبر</div></div></div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- 7. Newsletter Section -->
+    <!-- FAQ SECTION -->
+    <section class="section" id="faq-section">
+      <div style="text-align:center; margin-bottom:50px;">
+        <span class="section-tag"><i class="fa-solid fa-circle-question"></i>&nbsp;الأسئلة الشائعة</span>
+        <h2 class="section-title" style="font-size:32px; text-align:center;" data-i18n="faq_title">الأسئلة الشائعة</h2>
+        <p style="color:var(--text-muted); font-size:15px; margin-top:12px;" data-i18n="faq_subtitle">إجابات على أكثر الأسئلة شيوعاً حول منتجاتنا وخدماتنا</p>
+      </div>
+      <div class="faq-container">
+        <div class="faq-item" id="faq-1">
+          <button class="faq-question" onclick="toggleFaq('faq-1')" aria-expanded="false">
+            <span class="faq-question-text" data-i18n="faq_q1">ما هي مناطق التوصيل المتاحة؟</span>
+            <span class="faq-icon"><i class="fa-solid fa-plus"></i></span>
+          </button>
+          <div class="faq-answer" data-i18n="faq_a1">نشحن لجميع محافظات مصر. التوصيل داخل القاهرة والجيزة يستغرق من 2-3 أيام عمل، وباقي المحافظات من 3-5 أيام عمل.</div>
+        </div>
+        <div class="faq-item" id="faq-2">
+          <button class="faq-question" onclick="toggleFaq('faq-2')" aria-expanded="false">
+            <span class="faq-question-text" data-i18n="faq_q2">ما هي طرق الدفع المقبولة؟</span>
+            <span class="faq-icon"><i class="fa-solid fa-plus"></i></span>
+          </button>
+          <div class="faq-answer" data-i18n="faq_a2">نقبل الدفع عند الاستلام (COD)، إنستا باي، والمحافظ الإلكترونية (فودافون كاش، اتصالات كاش، أورنج كاش).</div>
+        </div>
+        <div class="faq-item" id="faq-3">
+          <button class="faq-question" onclick="toggleFaq('faq-3')" aria-expanded="false">
+            <span class="faq-question-text" data-i18n="faq_q3">هل يمكنني إرجاع المنتج أو استبداله؟</span>
+            <span class="faq-icon"><i class="fa-solid fa-plus"></i></span>
+          </button>
+          <div class="faq-answer" data-i18n="faq_a3">نعم، نقبل الإرجاع والاستبدال خلال 14 يوماً من تاريخ الاستلام، بشرط أن يكون المنتج في حالته الأصلية وغير مستخدم.</div>
+        </div>
+        <div class="faq-item" id="faq-4">
+          <button class="faq-question" onclick="toggleFaq('faq-4')" aria-expanded="false">
+            <span class="faq-question-text" data-i18n="faq_q4">كيف يمكنني متابعة حالة طلبي؟</span>
+            <span class="faq-icon"><i class="fa-solid fa-plus"></i></span>
+          </button>
+          <div class="faq-answer" data-i18n="faq_a4">بعد تأكيد طلبك، ستتلقى رسالة على واتساب برقم تتبع شحنتك. يمكنك أيضاً التواصل معنا مباشرة عبر واتساب لأي استفسار.</div>
+        </div>
+        <div class="faq-item" id="faq-5">
+          <button class="faq-question" onclick="toggleFaq('faq-5')" aria-expanded="false">
+            <span class="faq-question-text" data-i18n="faq_q5">هل المنتجات تمتلك ضمان؟</span>
+            <span class="faq-icon"><i class="fa-solid fa-plus"></i></span>
+          </button>
+          <div class="faq-answer" data-i18n="faq_a5">نعم، معظم منتجاتنا تأتي بضمان من المصنّع. تفاصيل الضمان موضحة في صفحة كل منتج على حدة.</div>
+        </div>
+        <div class="faq-item" id="faq-6">
+          <button class="faq-question" onclick="toggleFaq('faq-6')" aria-expanded="false">
+            <span class="faq-question-text" data-i18n="faq_q6">كيف أطلب بالجملة أو لشركة؟</span>
+            <span class="faq-icon"><i class="fa-solid fa-plus"></i></span>
+          </button>
+          <div class="faq-answer" data-i18n="faq_a6">للطلبات بالجملة أو طلبات الشركات، تواصل معنا مباشرة عبر واتساب أو صفحة اتصل بنا للحصول على أفضل عرض سعر.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEWSLETTER -->
     <section class="newsletter-section">
+      <div class="newsletter-icon"><i class="fa-solid fa-envelope"></i></div>
       <h2 class="newsletter-title" data-i18n="news_title">اشترك في النشرة البريدية</h2>
       <p class="newsletter-subtitle" data-i18n="news_subtitle">كن أول من يعلم بخصوماتنا الجديدة وأحدث المنتجات التي تصل إلى معارضنا.</p>
       <form class="newsletter-form" id="newsletter-form">
@@ -436,124 +339,69 @@
 
   </main>
 
-  <!-- Global Footer Container -->
   <footer id="global-footer"></footer>
 
-  <!-- Page Loader Logic -->
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      if (!window.BIDAYA_DATA) return;
-      
-      const { categories, products } = window.BIDAYA_DATA;
-      const lang = window.BIDAYA_APP ? window.BIDAYA_APP.currentLang() : "ar";
-      
-      // 1. Render Categories Carousel
-      const catContainer = document.getElementById("categories-container");
-      if (catContainer) {
-        catContainer.innerHTML = categories.map(cat => `
-          <div class="category-card" onclick="window.location.href='pages/products.html?category=${cat.id}'">
-            <div class="category-icon-wrapper flex-center">
-              <i class="fa-solid ${cat.icon}"></i>
-            </div>
-            <div class="category-name">${lang === "ar" ? cat.nameAr : cat.nameEn}</div>
-          </div>
-        `).join('');
-      }
-      
-      // Helper function to build Product Card HTML
-      function createProductCardHTML(p) {
-        const name = lang === "ar" ? p.nameAr : p.nameEn;
-        const viewText = lang === "ar" ? "التفاصيل" : "Details";
-        const addText = lang === "ar" ? "أضف للسلة" : "Add to Cart";
-        const isOutOfStock = p.stock === "out-of-stock";
-        const badgeHTML = p.discount ? `<div class="badge-discount">${p.discount}% ${lang === "ar" ? "خصم" : "OFF"}</div>` : '';
-        const outBadgeHTML = isOutOfStock ? `<div class="badge-out">${lang === "ar" ? "نفد" : "SOLD OUT"}</div>` : '';
-        
-        return `
-          <div class="product-card">
-            <div class="card-img-wrapper">
-              <img src="${p.image}" alt="${name}" loading="lazy">
-              ${badgeHTML}
-              ${outBadgeHTML}
-            </div>
-            <div class="card-info">
-              <div class="card-category">${p.category}</div>
-              <a href="pages/products-details.html?id=${p.id}" class="card-name">${name}</a>
-              <div class="card-price-container">
-                <span class="price-current">${p.price} EGP</span>
-                ${p.oldPrice ? `<span class="price-old">${p.oldPrice} EGP</span>` : ''}
-              </div>
-              <div class="card-actions">
-                <a href="pages/products-details.html?id=${p.id}" class="btn btn-outline" style="padding: 10px 16px; font-size:13px;">${viewText}</a>
-                <button class="btn btn-primary" style="padding: 10px 16px; font-size:13px;" ${isOutOfStock ? "disabled" : ""} onclick="BIDAYA_APP.cart.add('${p.id}', 1)">
-                  <i class="fa-solid fa-cart-plus"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-      
-      // 2. Render Featured
-      const featContainer = document.getElementById("featured-products-container");
-      if (featContainer) {
-        const featured = products.filter(p => p.featured).slice(0, 4);
-        featContainer.innerHTML = featured.map(p => createProductCardHTML(p)).join('');
-      }
-      
-      // 3. Render Bestsellers
-      const bestContainer = document.getElementById("bestsellers-products-container");
-      if (bestContainer) {
-        const bestsellers = products.filter(p => p.bestSeller).slice(0, 4);
-        bestContainer.innerHTML = bestsellers.map(p => createProductCardHTML(p)).join('');
-      }
-      
-      // 4. Render New Arrivals
-      const newContainer = document.getElementById("newarrivals-products-container");
-      if (newContainer) {
-        const newArrivals = products.filter(p => p.newArrival).slice(0, 4);
-        newContainer.innerHTML = newArrivals.map(p => createProductCardHTML(p)).join('');
-      }
+    function toggleFaq(id) {
+      const item = document.getElementById(id);
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    }
+  </script>
 
-      // Hero Slider logic
-      let currentSlide = 0;
-      const slides = document.querySelectorAll(".hero-slide");
-      const dots = document.querySelectorAll(".dot");
-      
-      function showSlide(index) {
-        slides.forEach(s => s.classList.remove("active"));
-        dots.forEach(d => d.classList.remove("active"));
-        
-        slides[index].classList.add("active");
-        dots[index].classList.add("active");
-      }
-      
-      dots.forEach((dot, idx) => {
-        dot.addEventListener("click", () => {
-          currentSlide = idx;
-          showSlide(currentSlide);
+  <script>
+    window.addEventListener('load', function() {
+      if (typeof gsap === 'undefined') return;
+      if (typeof ScrollTrigger !== 'undefined') gsap.registerPlugin(ScrollTrigger);
+
+      // Hero Animation
+      const tl = gsap.timeline({ delay: 0.3 });
+      tl.from('.hero-slide.active .hero-tag', { duration:0.6, opacity:0, y:-20, ease:'power2.out' })
+        .from('.hero-slide.active .hero-title', { duration:0.8, opacity:0, y:30, ease:'power3.out' }, '-=0.3')
+        .from('.hero-slide.active .hero-subtitle', { duration:0.6, opacity:0, y:20, ease:'power2.out' }, '-=0.4')
+        .from('.hero-slide.active .hero-actions', { duration:0.5, opacity:0, y:20, ease:'power2.out' }, '-=0.3');
+
+      // Stats Counter
+      if (typeof ScrollTrigger !== 'undefined') {
+        ScrollTrigger.create({
+          trigger: '#stats-bar', start:'top 85%', once:true,
+          onEnter: () => {
+            document.querySelectorAll('.stat-number').forEach(el => {
+              const target = parseInt(el.dataset.target);
+              const suffix = el.textContent.includes('%') ? '%' : '+';
+              gsap.to({ val:0 }, { val:target, duration:2, ease:'power1.out',
+                onUpdate: function() { el.textContent = Math.floor(this.targets()[0].val) + suffix; }
+              });
+            });
+          }
         });
-      });
-      
-      setInterval(() => {
-        currentSlide = (currentSlide + 1) % slides.length;
-        showSlide(currentSlide);
-      }, 5000);
 
-      // Handle Newsletter Submit
-      document.getElementById("newsletter-form").addEventListener("submit", (e) => {
-        e.preventDefault();
-        const msg = lang === "ar" ? "شكراً لاشتراكك في نشرتنا الإخبارية!" : "Thank you for subscribing to our newsletter!";
-        BIDAYA_APP.showToast(msg, "success");
-        e.target.reset();
-      });
-
-      // Update values when language changes
-      window.addEventListener("langChanged", (e) => {
-        const newLang = e.detail.lang;
-        window.location.reload(); // Quick refresh to update data bindings
-      });
+        ScrollTrigger.create({ trigger:'#categories-section', start:'top 80%', once:true,
+          onEnter:() => { gsap.from('#categories-container .category-card', { duration:0.5, opacity:0, y:40, stagger:0.08, delay:0.2, ease:'power2.out' }); }
+        });
+        ScrollTrigger.create({ trigger:'#featured-section', start:'top 80%', once:true,
+          onEnter:() => { gsap.from('#featured-products-container .product-card', { duration:0.5, opacity:0, y:40, stagger:0.1, delay:0.2, ease:'back.out(1.2)' }); }
+        });
+        ScrollTrigger.create({ trigger:'#bestsellers-section', start:'top 80%', once:true,
+          onEnter:() => { gsap.from('#bestsellers-products-container .product-card', { duration:0.5, opacity:0, scale:0.9, stagger:0.1, ease:'back.out(1.2)' }); }
+        });
+        ScrollTrigger.create({ trigger:'#features-section', start:'top 80%', once:true,
+          onEnter:() => { gsap.from('#features-section .feature-card', { duration:0.6, opacity:0, y:50, stagger:0.15, ease:'power2.out' }); }
+        });
+        ScrollTrigger.create({ trigger:'#testimonials-grid', start:'top 80%', once:true,
+          onEnter:() => { gsap.from('.testimonial-card', { duration:0.6, opacity:0, y:40, stagger:0.15, ease:'power2.out' }); }
+        });
+        ScrollTrigger.create({ trigger:'#faq-section', start:'top 80%', once:true,
+          onEnter:() => { gsap.from('.faq-item', { duration:0.5, opacity:0, x:-30, stagger:0.1, ease:'power2.out' }); }
+        });
+        ScrollTrigger.create({ trigger:'.newsletter-section', start:'top 85%', once:true,
+          onEnter:() => { gsap.from('.newsletter-section', { duration:0.8, opacity:0, y:40, ease:'power2.out' }); }
+        });
+      }
     });
   </script>
+
+  <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>

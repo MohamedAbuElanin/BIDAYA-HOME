@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title data-i18n="cart_checkout">إتمام الطلب | بداية هوم</title>
+  <title data-i18n="cart_checkout">Ø¥ØªÙ…Ø§Ù… Ø§Ù„Ø·Ù„Ø¨ | Ø¨Ø¯Ø§ÙŠØ© Ù‡ÙˆÙ…</title>
   <!-- FontAwesome for Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Core stylesheet -->
   <link rel="stylesheet" href="../assets/css/style.css">
   
@@ -151,7 +151,7 @@
     }
   </style>
 </head>
-<body>
+<body data-page="checkout">
 
   <!-- Sticky Header -->
   <header id="global-header"></header>
@@ -159,16 +159,16 @@
   <main class="container" style="padding-top: 30px; min-height: 70vh;">
     <!-- Breadcrumb -->
     <div class="breadcrumb">
-      <a href="../index.html" data-i18n="nav_home">الرئيسية</a>
+      <a href="../index.html" data-i18n="nav_home">Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©</a>
       <span class="breadcrumb-separator">/</span>
-      <a href="cart.html" data-i18n="cart_title">عربة التسوق</a>
+      <a href="cart.html" data-i18n="cart_title">Ø¹Ø±Ø¨Ø© Ø§Ù„ØªØ³ÙˆÙ‚</a>
       <span class="breadcrumb-separator">/</span>
-      <span data-i18n="cart_checkout">إتمام الطلب</span>
+      <span data-i18n="cart_checkout">Ø¥ØªÙ…Ø§Ù… Ø§Ù„Ø·Ù„Ø¨</span>
     </div>
 
     <!-- Main View Switcher -->
     <div id="checkout-main-content">
-      <h1 style="font-weight: 800; font-size:28px; color:var(--primary); margin-bottom: 10px;" data-i18n="cart_checkout">إتمام الطلب</h1>
+      <h1 style="font-weight: 800; font-size:28px; color:var(--primary); margin-bottom: 10px;" data-i18n="cart_checkout">Ø¥ØªÙ…Ø§Ù… Ø§Ù„Ø·Ù„Ø¨</h1>
       
       <div class="checkout-layout">
         
@@ -176,91 +176,91 @@
         <form class="checkout-form-section" id="checkout-form" novalidate>
           
           <!-- 1. Customer Information -->
-          <div class="checkout-subtitle" data-i18n="contact_info_title">بيانات العميل</div>
+          <div class="checkout-subtitle" data-i18n="contact_info_title">Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„</div>
           
           <div class="grid grid-2">
             <div class="form-group" id="group-name">
-              <label for="bill-name" data-i18n="checkout_name">الاسم الكامل *</label>
-              <input type="text" id="bill-name" class="form-control" placeholder="أدخل اسمك ثلاثي على الأقل" required>
-              <span class="error-msg" id="err-name" data-i18n="val_name">يرجى إدخال الاسم كاملاً</span>
+              <label for="bill-name" data-i18n="checkout_name">Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„ *</label>
+              <input type="text" id="bill-name" class="form-control" placeholder="Ø£Ø¯Ø®Ù„ Ø§Ø³Ù…Ùƒ Ø«Ù„Ø§Ø«ÙŠ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„" required>
+              <span class="error-msg" id="err-name" data-i18n="val_name">ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ø§Ø³Ù… ÙƒØ§Ù…Ù„Ø§Ù‹</span>
             </div>
             
             <div class="form-group" id="group-phone">
-              <label for="bill-phone" data-i18n="checkout_phone">رقم الهاتف بالتفصيل *</label>
-              <input type="tel" id="bill-phone" class="form-control" placeholder="مثال: 01012345678" required>
-              <span class="error-msg" id="err-phone" data-i18n="val_phone">يرجى إدخال رقم هاتف مصري صحيح</span>
+              <label for="bill-phone" data-i18n="checkout_phone">Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ Ø¨Ø§Ù„ØªÙØµÙŠÙ„ *</label>
+              <input type="tel" id="bill-phone" class="form-control" placeholder="Ù…Ø«Ø§Ù„: 01012345678" required>
+              <span class="error-msg" id="err-phone" data-i18n="val_phone">ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ Ø±Ù‚Ù… Ù‡Ø§ØªÙ Ù…ØµØ±ÙŠ ØµØ­ÙŠØ­</span>
             </div>
           </div>
           
           <!-- 2. Shipping details -->
-          <div class="checkout-subtitle" style="margin-top: 20px;" data-i18n="cart_shipping">عنوان التوصيل</div>
+          <div class="checkout-subtitle" style="margin-top: 20px;" data-i18n="cart_shipping">Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ØªÙˆØµÙŠÙ„</div>
           
           <div class="grid grid-2">
             <div class="form-group" id="group-gov">
-              <label for="bill-gov" data-i18n="checkout_gov">المحافظة *</label>
+              <label for="bill-gov" data-i18n="checkout_gov">Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø© *</label>
               <select id="bill-gov" class="form-control" required>
-                <option value="" disabled selected data-i18n="checkout_gov">-- اختر المحافظة --</option>
+                <option value="" disabled selected data-i18n="checkout_gov">-- Ø§Ø®ØªØ± Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø© --</option>
                 <!-- Filled dynamically -->
               </select>
-              <span class="error-msg" id="err-gov" data-i18n="val_gov">يرجى اختيار المحافظة</span>
+              <span class="error-msg" id="err-gov" data-i18n="val_gov">ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø©</span>
             </div>
             
             <div class="form-group" id="group-city">
-              <label for="bill-city" data-i18n="checkout_city">المدينة / المنطقة *</label>
-              <input type="text" id="bill-city" class="form-control" placeholder="أدخل اسم المدينة أو الحي" required>
-              <span class="error-msg" id="err-city" data-i18n="val_city">يرجى إدخال المدينة</span>
+              <label for="bill-city" data-i18n="checkout_city">Ø§Ù„Ù…Ø¯ÙŠÙ†Ø© / Ø§Ù„Ù…Ù†Ø·Ù‚Ø© *</label>
+              <input type="text" id="bill-city" class="form-control" placeholder="Ø£Ø¯Ø®Ù„ Ø§Ø³Ù… Ø§Ù„Ù…Ø¯ÙŠÙ†Ø© Ø£Ùˆ Ø§Ù„Ø­ÙŠ" required>
+              <span class="error-msg" id="err-city" data-i18n="val_city">ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©</span>
             </div>
           </div>
           
           <div class="form-group" id="group-address">
-            <label for="bill-address" data-i18n="checkout_address">العنوان بالتفصيل *</label>
-            <textarea id="bill-address" class="form-control" rows="3" placeholder="الشارع، رقم العمارة، رقم الطابق، الشقة" required></textarea>
-            <span class="error-msg" id="err-address" data-i18n="val_address">يرجى إدخال العنوان بالتفصيل</span>
+            <label for="bill-address" data-i18n="checkout_address">Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø¨Ø§Ù„ØªÙØµÙŠÙ„ *</label>
+            <textarea id="bill-address" class="form-control" rows="3" placeholder="Ø§Ù„Ø´Ø§Ø±Ø¹ØŒ Ø±Ù‚Ù… Ø§Ù„Ø¹Ù…Ø§Ø±Ø©ØŒ Ø±Ù‚Ù… Ø§Ù„Ø·Ø§Ø¨Ù‚ØŒ Ø§Ù„Ø´Ù‚Ø©" required></textarea>
+            <span class="error-msg" id="err-address" data-i18n="val_address">ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø¨Ø§Ù„ØªÙØµÙŠÙ„</span>
           </div>
           
           <div class="form-group">
-            <label for="bill-landmark" data-i18n="checkout_landmark">علامة مميزة (اختياري)</label>
-            <input type="text" id="bill-landmark" class="form-control" placeholder="مثال: بجوار مسجد النور أو أمام الصيدلية">
+            <label for="bill-landmark" data-i18n="checkout_landmark">Ø¹Ù„Ø§Ù…Ø© Ù…Ù…ÙŠØ²Ø© (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)</label>
+            <input type="text" id="bill-landmark" class="form-control" placeholder="Ù…Ø«Ø§Ù„: Ø¨Ø¬ÙˆØ§Ø± Ù…Ø³Ø¬Ø¯ Ø§Ù„Ù†ÙˆØ± Ø£Ùˆ Ø£Ù…Ø§Ù… Ø§Ù„ØµÙŠØ¯Ù„ÙŠØ©">
           </div>
           
           <!-- 3. Payment details -->
-          <div class="checkout-subtitle" style="margin-top: 20px;" data-i18n="checkout_payment">طريقة الدفع</div>
+          <div class="checkout-subtitle" style="margin-top: 20px;" data-i18n="checkout_payment">Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹</div>
           <div class="payment-options">
             <div class="payment-option-card active" onclick="selectPaymentMethod('cod', this)">
               <input type="radio" name="payment" id="pay-cod" value="cod" checked>
               <div class="payment-option-info">
-                <div class="payment-option-title" data-i18n="checkout_payment_cod">الدفع عند الاستلام (COD)</div>
-                <div class="payment-option-desc">ادفع نقداً عند استلام طلبك أمام باب البيت.</div>
+                <div class="payment-option-title" data-i18n="checkout_payment_cod">Ø§Ù„Ø¯ÙØ¹ Ø¹Ù†Ø¯ Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù… (COD)</div>
+                <div class="payment-option-desc">Ø§Ø¯ÙØ¹ Ù†Ù‚Ø¯Ø§Ù‹ Ø¹Ù†Ø¯ Ø§Ø³ØªÙ„Ø§Ù… Ø·Ù„Ø¨Ùƒ Ø£Ù…Ø§Ù… Ø¨Ø§Ø¨ Ø§Ù„Ø¨ÙŠØª.</div>
               </div>
             </div>
             
             <div class="payment-option-card" onclick="selectPaymentMethod('instapay', this)">
               <input type="radio" name="payment" id="pay-instapay" value="instapay">
               <div class="payment-option-info">
-                <div class="payment-option-title" data-i18n="checkout_payment_instapay">عبر تطبيق إنستا باي (InstaPay)</div>
-                <div class="payment-option-desc">حول القيمة لحسابنا في إنستا باي قبل الشحن لتأكيد الطلب السريع.</div>
+                <div class="payment-option-title" data-i18n="checkout_payment_instapay">Ø¹Ø¨Ø± ØªØ·Ø¨ÙŠÙ‚ Ø¥Ù†Ø³ØªØ§ Ø¨Ø§ÙŠ (InstaPay)</div>
+                <div class="payment-option-desc">Ø­ÙˆÙ„ Ø§Ù„Ù‚ÙŠÙ…Ø© Ù„Ø­Ø³Ø§Ø¨Ù†Ø§ ÙÙŠ Ø¥Ù†Ø³ØªØ§ Ø¨Ø§ÙŠ Ù‚Ø¨Ù„ Ø§Ù„Ø´Ø­Ù† Ù„ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨ Ø§Ù„Ø³Ø±ÙŠØ¹.</div>
               </div>
             </div>
             
             <div class="payment-option-card" onclick="selectPaymentMethod('wallet', this)">
               <input type="radio" name="payment" id="pay-wallet" value="wallet">
               <div class="payment-option-info">
-                <div class="payment-option-title" data-i18n="checkout_payment_wallet">محفظة إلكترونية (فودافون كاش...)</div>
-                <div class="payment-option-desc">حول القيمة لمحفظتنا الإلكترونية لتأكيد شحن الطلب فوراً.</div>
+                <div class="payment-option-title" data-i18n="checkout_payment_wallet">Ù…Ø­ÙØ¸Ø© Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠØ© (ÙÙˆØ¯Ø§ÙÙˆÙ† ÙƒØ§Ø´...)</div>
+                <div class="payment-option-desc">Ø­ÙˆÙ„ Ø§Ù„Ù‚ÙŠÙ…Ø© Ù„Ù…Ø­ÙØ¸ØªÙ†Ø§ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠØ© Ù„ØªØ£ÙƒÙŠØ¯ Ø´Ø­Ù† Ø§Ù„Ø·Ù„Ø¨ ÙÙˆØ±Ø§Ù‹.</div>
               </div>
             </div>
           </div>
           
           <div class="form-group">
-            <label for="bill-notes" data-i18n="checkout_notes">ملاحظات إضافية على الطلب</label>
-            <textarea id="bill-notes" class="form-control" rows="3" placeholder="مواعيد التوصيل المفضلة أو أي تعليمات خاصة للشحن"></textarea>
+            <label for="bill-notes" data-i18n="checkout_notes">Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ© Ø¹Ù„Ù‰ Ø§Ù„Ø·Ù„Ø¨</label>
+            <textarea id="bill-notes" class="form-control" rows="3" placeholder="Ù…ÙˆØ§Ø¹ÙŠØ¯ Ø§Ù„ØªÙˆØµÙŠÙ„ Ø§Ù„Ù…ÙØ¶Ù„Ø© Ø£Ùˆ Ø£ÙŠ ØªØ¹Ù„ÙŠÙ…Ø§Øª Ø®Ø§ØµØ© Ù„Ù„Ø´Ø­Ù†"></textarea>
           </div>
           
         </form>
         
         <!-- Order Summary panel -->
         <aside class="summary-panel">
-          <h3 class="summary-title" data-i18n="checkout_summary">ملخص الطلب</h3>
+          <h3 class="summary-title" data-i18n="checkout_summary">Ù…Ù„Ø®Øµ Ø§Ù„Ø·Ù„Ø¨</h3>
           
           <!-- Products scroll panel -->
           <div class="summary-products-list" id="checkout-summary-items">
@@ -268,23 +268,23 @@
           </div>
           
           <div class="summary-row">
-            <span data-i18n="cart_subtotal">المجموع الفرعي</span>
+            <span data-i18n="cart_subtotal">Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹ Ø§Ù„ÙØ±Ø¹ÙŠ</span>
             <span id="summary-subtotal" style="font-weight: 700;">0 EGP</span>
           </div>
           
           <div class="summary-row">
-            <span data-i18n="cart_shipping">الشحن</span>
+            <span data-i18n="cart_shipping">Ø§Ù„Ø´Ø­Ù†</span>
             <span id="summary-shipping" style="font-weight: 700; color: var(--success);">0 EGP</span>
           </div>
           
           <div class="summary-row total">
-            <span data-i18n="cart_total">المجموع الكلي</span>
+            <span data-i18n="cart_total">Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹ Ø§Ù„ÙƒÙ„ÙŠ</span>
             <span id="summary-total">0 EGP</span>
           </div>
           
           <button type="button" class="btn btn-secondary" id="submit-order-btn" style="width: 100%; margin-top: 30px; padding:16px;" onclick="validateAndSubmitOrder()">
             <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i>
-            <span data-i18n="checkout_submit">تأكيد الطلب عبر واتساب</span>
+            <span data-i18n="checkout_submit">ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø·Ù„Ø¨ Ø¹Ø¨Ø± ÙˆØ§ØªØ³Ø§Ø¨</span>
           </button>
         </aside>
         
@@ -296,301 +296,15 @@
   <div class="processing-modal flex-center" id="processing-loader">
     <div>
       <i class="fa-solid fa-circle-notch processing-spinner"></i>
-      <h2 style="font-weight: 800; font-size:24px; margin-bottom:10px;">جاري حفظ الطلب...</h2>
-      <p style="opacity: 0.85;">يرجى عدم غلق الصفحة، نقوم الآن بتجهيز رسالة واتساب الخاصة بك...</p>
+      <h2 style="font-weight: 800; font-size:24px; margin-bottom:10px;">Ø¬Ø§Ø±ÙŠ Ø­ÙØ¸ Ø§Ù„Ø·Ù„Ø¨...</h2>
+      <p style="opacity: 0.85;">ÙŠØ±Ø¬Ù‰ Ø¹Ø¯Ù… ØºÙ„Ù‚ Ø§Ù„ØµÙØ­Ø©ØŒ Ù†Ù‚ÙˆÙ… Ø§Ù„Ø¢Ù† Ø¨ØªØ¬Ù‡ÙŠØ² Ø±Ø³Ø§Ù„Ø© ÙˆØ§ØªØ³Ø§Ø¨ Ø§Ù„Ø®Ø§ØµØ© Ø¨Ùƒ...</p>
     </div>
   </div>
 
   <!-- Global Footer -->
   <footer id="global-footer"></footer>
 
-  <!-- Firebase Compat Layer Libraries -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  
-  <!-- Scripts -->
-  <script src="../js/products-data.js"></script>
-  <script src="../js/main.js"></script>
-  <script src="../firebase/firebase-config.js"></script>
-  
-  <script>
-    let activeShippingFee = 0;
-    
-    document.addEventListener("DOMContentLoaded", () => {
-      if (!window.BIDAYA_DATA || !window.BIDAYA_APP) return;
-
-      const { governorates, products } = window.BIDAYA_DATA;
-      const cartItems = BIDAYA_APP.cart.get();
-      const lang = BIDAYA_APP.currentLang();
-
-      // If cart is empty, redirect to cart page immediately
-      if (cartItems.length === 0) {
-        window.location.href = "cart.html";
-        return;
-      }
-
-      // 1. Fill Governorate select options
-      const govSelect = document.getElementById("bill-gov");
-      governorates.forEach(gov => {
-        const option = document.createElement("option");
-        option.value = gov.id;
-        option.textContent = lang === "ar" ? gov.nameAr : gov.nameEn;
-        govSelect.appendChild(option);
-      });
-
-      // Update shipping cost when governorate is chosen
-      govSelect.addEventListener("change", (e) => {
-        const govId = e.target.value;
-        const gov = governorates.find(g => g.id === govId);
-        if (gov) {
-          activeShippingFee = gov.shipping;
-          updateCheckoutPricing();
-        }
-      });
-
-      // 2. Render summary items list
-      const summaryItemsContainer = document.getElementById("checkout-summary-items");
-      summaryItemsContainer.innerHTML = cartItems.map(item => {
-        const prod = products.find(p => p.id === item.id);
-        if (!prod) return '';
-        const name = lang === "ar" ? prod.nameAr : prod.nameEn;
-        return `
-          <div class="summary-product-item">
-            <div>
-              <span style="font-weight: 700; color: var(--primary);">${item.qty}x</span>
-              <span style="color:var(--text); font-weight:600;">${name}</span>
-            </div>
-            <span style="font-weight: 700; flex-shrink:0; margin-inline-start: 16px;">${prod.price * item.qty} EGP</span>
-          </div>
-        `;
-      }).join('');
-
-      updateCheckoutPricing();
-    });
-
-    function updateCheckoutPricing() {
-      const subtotal = BIDAYA_APP.cart.total();
-      document.getElementById("summary-subtotal").textContent = `${subtotal} EGP`;
-      document.getElementById("summary-shipping").textContent = `${activeShippingFee} EGP`;
-      document.getElementById("summary-total").textContent = `${subtotal + activeShippingFee} EGP`;
-    }
-
-    function selectPaymentMethod(method, element) {
-      document.querySelectorAll(".payment-option-card").forEach(c => c.classList.remove("active"));
-      element.classList.add("active");
-      document.getElementById(`pay-${method}`).checked = true;
-    }
-
-    // Validation & Order Submission Flow
-    function validateAndSubmitOrder() {
-      const lang = BIDAYA_APP.currentLang();
-      const val = BIDAYA_APP.translations[lang];
-
-      const nameInput = document.getElementById("bill-name");
-      const phoneInput = document.getElementById("bill-phone");
-      const govSelect = document.getElementById("bill-gov");
-      const cityInput = document.getElementById("bill-city");
-      const addressInput = document.getElementById("bill-address");
-      const notesInput = document.getElementById("bill-notes");
-      const landmarkInput = document.getElementById("bill-landmark");
-      const paymentInput = document.querySelector('input[name="payment"]:checked');
-
-      // Clear all previous validation states
-      document.querySelectorAll(".form-group").forEach(g => g.classList.remove("error", "success"));
-
-      let isValid = true;
-      let firstErrorElement = null;
-
-      function setError(input, errText) {
-        isValid = false;
-        const group = input.closest(".form-group");
-        group.classList.add("error");
-        if (!firstErrorElement) firstErrorElement = input;
-      }
-
-      function setSuccess(input) {
-        const group = input.closest(".form-group");
-        group.classList.add("success");
-      }
-
-      // Name: At least 3 words, and minimum 10 chars
-      const nameVal = nameInput.value.trim();
-      const wordCount = nameVal.split(/\s+/).filter(w => w.length > 0).length;
-      if (nameVal.length < 8 || wordCount < 3) {
-        setError(nameInput);
-      } else {
-        setSuccess(nameInput);
-      }
-
-      // Phone: Egyptian standard (11 digits, starts with 010, 011, 012, 015)
-      const phoneVal = phoneInput.value.trim();
-      const phoneRegex = /^01[0125][0-9]{8}$/;
-      if (!phoneRegex.test(phoneVal)) {
-        setError(phoneInput);
-      } else {
-        setSuccess(phoneInput);
-      }
-
-      // Governorate
-      if (!govSelect.value) {
-        setError(govSelect);
-      } else {
-        setSuccess(govSelect);
-      }
-
-      // City
-      if (cityInput.value.trim().length < 3) {
-        setError(cityInput);
-      } else {
-        setSuccess(cityInput);
-      }
-
-      // Address
-      if (addressInput.value.trim().length < 10) {
-        setError(addressInput);
-      } else {
-        setSuccess(addressInput);
-      }
-
-      if (!isValid) {
-        if (firstErrorElement) {
-          firstErrorElement.focus();
-          firstErrorElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-        BIDAYA_APP.showToast(lang === "ar" ? "يرجى مراجعة وتصحيح الحقول المحددة باللون الأحمر" : "Please fill all required fields correctly", "danger");
-        return;
-      }
-
-      // Compile Order details
-      const subtotal = BIDAYA_APP.cart.total();
-      const govText = govSelect.options[govSelect.selectedIndex].text;
-      const totalAmount = subtotal + activeShippingFee;
-
-      const orderPayload = {
-        customer: {
-          name: nameVal,
-          phone: phoneVal,
-          govId: govSelect.value,
-          govName: govText,
-          city: cityInput.value.trim(),
-          address: addressInput.value.trim(),
-          landmark: landmarkInput.value.trim(),
-          notes: notesInput.value.trim()
-        },
-        items: BIDAYA_APP.cart.get(),
-        paymentMethod: paymentInput.value,
-        pricing: {
-          subtotal: subtotal,
-          shipping: activeShippingFee,
-          total: totalAmount
-        }
-      };
-
-      // Show loader modal
-      const loader = document.getElementById("processing-loader");
-      loader.style.display = "flex";
-
-      // Call Database Access Layer
-      window.BIDAYA_DB.saveOrder(orderPayload)
-        .then((orderId) => {
-          // Success! Build WhatsApp link
-          const waUrl = buildWhatsAppLink(orderId, orderPayload);
-          
-          // Clear cart
-          BIDAYA_APP.cart.clear();
-
-          // Animate page to Order Success state
-          renderOrderSuccessState(orderId, waUrl);
-          
-          // Trigger redirect
-          window.open(waUrl, "_blank");
-        })
-        .catch((err) => {
-          console.error("Order save critical failure:", err);
-          BIDAYA_APP.showToast(val["toast_order_error"], "danger");
-        })
-        .finally(() => {
-          loader.style.display = "none";
-        });
-    }
-
-    function buildWhatsAppLink(orderId, payload) {
-      const lang = BIDAYA_APP.currentLang();
-      const products = window.BIDAYA_DATA.products;
-
-      let msg = `*BIDAYA HOME - طلبيّة جديدة رقم ${orderId}*\n`;
-      msg += `--------------------------------------\n`;
-      msg += `*بيانات العميل:*\n`;
-      msg += `- الاسم: ${payload.customer.name}\n`;
-      msg += `- رقم الهاتف: ${payload.customer.phone}\n`;
-      msg += `- العنوان: ${payload.customer.address}، ${payload.customer.city}، ${payload.customer.govName}\n`;
-      if (payload.customer.landmark) {
-        msg += `- علامة مميزة: ${payload.customer.landmark}\n`;
-      }
-      
-      let payText = "الدفع عند الاستلام (COD)";
-      if (payload.paymentMethod === "instapay") payText = "إنستا باي (InstaPay)";
-      if (payload.paymentMethod === "wallet") payText = "محفظة إلكترونية";
-      
-      msg += `- طريقة الدفع: ${payText}\n`;
-      
-      if (payload.customer.notes) {
-        msg += `- ملاحظات: ${payload.customer.notes}\n`;
-      }
-      
-      msg += `\n*المنتجات المطلوبة:*\n`;
-      payload.items.forEach(item => {
-        const prod = products.find(p => p.id === item.id);
-        if (prod) {
-          const name = lang === "ar" ? prod.nameAr : prod.nameEn;
-          msg += `- ${item.qty}x ${name} (${prod.price} EGP)\n`;
-        }
-      });
-      
-      msg += `\n*تفاصيل التكلفة:*\n`;
-      msg += `- المجموع الفرعي: ${payload.pricing.subtotal} EGP\n`;
-      msg += `- مصاريف الشحن: ${payload.pricing.shipping} EGP\n`;
-      msg += `- *المجموع الكلي: ${payload.pricing.total} EGP*\n`;
-      msg += `--------------------------------------\n`;
-      msg += `شكراً للتسوق من بداية هوم. يرجى تأكيد استلام الطلب والشحن.`;
-
-      const encoded = encodeURIComponent(msg);
-      return `https://wa.me/${BIDAYA_APP.whatsappNumber}?text=${encoded}`;
-    }
-
-    function renderOrderSuccessState(orderId, waUrl) {
-      const container = document.getElementById("checkout-main-content");
-      const lang = BIDAYA_APP.currentLang();
-      
-      document.title = lang === "ar" ? "تم تأكيد طلبك | بداية هوم" : "Order Confirmed | BIDAYA HOME";
-
-      container.innerHTML = `
-        <div class="success-container fade-in">
-          <div class="success-icon-wrapper flex-center">
-            <i class="fa-solid fa-check"></i>
-          </div>
-          
-          <h2 style="font-weight: 800; font-size: 26px; color: var(--primary); margin-bottom: 12px;">
-            ${lang === "ar" ? "تم تسجيل طلبك بنجاح!" : "Your order was successfully registered!"}
-          </h2>
-          
-          <p style="color:var(--text-muted); margin-bottom: 24px; line-height: 1.8;">
-            لقد تم إنشاء طلبك برقم *${orderId}*. لقد قمنا بفتح نافذة جديدة للتواصل وتأكيد الشحن معك عبر واتساب. إذا لم تفتح النافذة تلقائياً، يمكنك النقر على الزر أدناه لمواصلة المحادثة معنا.
-          </p>
-          
-          <div style="display: flex; flex-direction: column; gap: 12px; max-width: 400px; margin: 0 auto;">
-            <a href="${waUrl}" target="_blank" class="btn btn-success" style="padding: 14px;">
-              <i class="fa-brands fa-whatsapp"></i>
-              <span>${lang === "ar" ? "افتح محادثة واتساب" : "Open WhatsApp Chat"}</span>
-            </a>
-            
-            <a href="../index.html" class="btn btn-outline" style="padding: 14px;">
-              <span>${lang === "ar" ? "العودة للرئيسية" : "Return to Home Page"}</span>
-            </a>
-          </div>
-        </div>
-      `;
-    }
-  </script>
+  <script type="module" src="../assets/js/app.js"></script>
 </body>
 </html>
+
