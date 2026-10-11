@@ -157,12 +157,14 @@ export interface Order {
 export type AnalyticsEventType =
   | 'PAGE_VIEW'
   | 'PRODUCT_VIEW'
+  | 'PRODUCT_CLICK'
   | 'SEARCH'
   | 'CATEGORY_VIEW'
   | 'ADD_TO_CART'
   | 'REMOVE_FROM_CART'
   | 'BEGIN_CHECKOUT'
   | 'ORDER_CREATED'
+  | 'ORDER_SUBMIT_ATTEMPT'
   | 'WHATSAPP_CLICK';
 
 export interface AnalyticsEvent {

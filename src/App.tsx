@@ -55,12 +55,9 @@ const App: React.FC = () => {
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | undefined>(undefined);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Initialize services
-  useEffect(() => {
-    analytics.track('PAGE_VIEW', { page: 'home' });
-  }, []);
-
-  // Track page changes & scroll to top
+  // Track page changes & scroll to top.
+  // Fires on mount (currentRoute='home') and on every subsequent route change.
+  // The empty-dependency effect was removed to prevent double PAGE_VIEW{home} on initial load.
   useEffect(() => {
     if (!isAdminMode) {
       analytics.track('PAGE_VIEW', { page: currentRoute });

@@ -31,7 +31,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
       : 0;
 
   const handleCardClick = () => {
-    analytics.track('PRODUCT_VIEW', {
+    // PRODUCT_CLICK = user tapped/clicked the card (intent signal).
+    // PRODUCT_VIEW = fires in App.tsx/handleOpenDetails when the modal is fully open (actual detail view).
+    // Keeping them separate prevents double-counting a single user action as two product views.
+    analytics.track('PRODUCT_CLICK', {
       product_id: product.id,
       product_name: productName,
       sku: product.sku

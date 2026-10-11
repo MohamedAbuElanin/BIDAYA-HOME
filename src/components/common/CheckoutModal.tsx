@@ -139,8 +139,15 @@ export const CheckoutModal: React.FC = () => {
 
     setIsSubmitting(true);
 
+    // Stage 1: Record submit intent before any persistence.
+    // This fires even if createOrder() later throws.
+    analytics.track('ORDER_SUBMIT_ATTEMPT', {
+      items_count: items.length,
+      total_estimate: totalAmount,
+    });
+
     try {
-      // 1. Prepare Order items
+      // 2. Prepare Order items
       const orderItems = items.map(item => ({
         product_id: item.product.id,
         product_name: item.product.name_ar,
@@ -152,7 +159,10 @@ export const CheckoutModal: React.FC = () => {
         total_price: item.product.price * item.quantity
       }));
 
-      // 2. Create Order in Store/DB
+      // 3. Create Order — saves synchronously to localStorage.
+      //    Supabase insert is fire-and-forget inside createOrder(); we cannot
+      //    await it here without a larger architectural change (async createOrder).
+      //    ORDER_CREATED therefore means: saved to localStorage ✓, Supabase: pending.
       const order = dataStore.createOrder({
         customer: {
           ...formData,
@@ -174,7 +184,8 @@ export const CheckoutModal: React.FC = () => {
         traffic_source: analytics.getTrafficSource()
       });
 
-      // 3. Analytics
+      // Stage 2: ORDER_CREATED — localStorage save confirmed (synchronous).
+      //          Supabase sync status cannot be confirmed here (fire-and-forget).
       analytics.setLocation(formData.governorate);
       analytics.track('ORDER_CREATED', {
         order_id: order.id,
@@ -185,10 +196,6 @@ export const CheckoutModal: React.FC = () => {
         delivery_fee: deliveryFeeInfo.fee,
         deposit_amount: depositAmount,
         remaining_amount: remainingAmount
-      });
-      analytics.track('WHATSAPP_CLICK', {
-        source: 'checkout_submission',
-        order_number: order.order_number
       });
 
       setCreatedOrder(order);
@@ -203,9 +210,21 @@ export const CheckoutModal: React.FC = () => {
         });
       } catch {}
 
-      // 4. Open WhatsApp directly in new tab
+      // Stage 3: Attempt to open WhatsApp.
+      //          window.open does NOT guarantee the tab opened (popup blocker, mobile OS, etc.).
+      //          We record the attempt via WHATSAPP_CLICK; actual delivery confirmation
+      //          must be verified manually or via WhatsApp Business API.
       const whatsappUrl = getWhatsAppChatUrl(order);
-      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+
+      // Stage 3 event — window_opened reflects whether the browser allowed the popup,
+      // NOT whether the user sent a WhatsApp message. Message delivery cannot be confirmed
+      // from the browser.
+      analytics.track('WHATSAPP_CLICK', {
+        source: 'checkout_submission',
+        order_number: order.order_number,
+        window_opened: whatsappWindow !== null,
+      });
     } catch (err) {
       console.error('Order submission failed:', err);
     } finally {
