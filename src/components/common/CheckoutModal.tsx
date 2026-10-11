@@ -22,6 +22,7 @@ import { getWhatsAppChatUrl, formatWhatsAppMessage, formatPaymentMethodName } fr
 import { analytics } from '../../services/analytics';
 import { Order, CustomerInfo, DepositPaymentMethod, RemainingPaymentMethod } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
+import { captureAppException } from '../../lib/posthog';
 
 export const CheckoutModal: React.FC = () => {
   const { lang, t, tx } = useLanguage();
@@ -227,6 +228,14 @@ export const CheckoutModal: React.FC = () => {
       });
     } catch (err) {
       console.error('Order submission failed:', err);
+      captureAppException(err, {
+        stage: 'checkout_submission',
+        items_count: items.length,
+        total_estimate: totalAmount,
+        deposit_method: depositMethod,
+        remaining_method: remainingMethod,
+        governorate: formData.governorate,
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -23,6 +23,7 @@ import {
   INITIAL_ORDERS,
   INITIAL_ADMIN_USERS
 } from '../data/seedData';
+import { captureAppException } from '../lib/posthog';
 import { getSupabaseClient } from '../lib/supabase';
 
 const STORAGE_KEYS = {
@@ -77,6 +78,7 @@ class DataStoreService {
         listener();
       } catch (e) {
         console.error('Error in store listener:', e);
+        captureAppException(e, { source: 'dataStore.notifyListeners' });
       }
     });
   }

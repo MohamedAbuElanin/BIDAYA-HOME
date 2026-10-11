@@ -34,6 +34,15 @@ export const initPostHog = () => {
     // address, payment method) and any other DOM interactions.
     autocapture: false,
 
+    // ── Error Tracking ────────────────────────────────────────────
+    // Captures unhandled runtime exceptions and promise rejections.
+    // console.error capture is kept false to avoid flooding quotas with normal log noise.
+    capture_exceptions: {
+      capture_unhandled_errors: true,
+      capture_unhandled_rejections: true,
+      capture_console_errors: false,
+    },
+
     // ── Session Replay: DISABLED ──────────────────────────────────────────
     // Session Replay is intentionally OFF for privacy compliance.
     //
@@ -89,10 +98,56 @@ const noopPosthog = {
   alias: noop,
   group: noop,
   setPersonProperties: noop,
+  captureException: noop,
 } as unknown as typeof posthog;
 
 export const getPostHog = (): typeof posthog =>
   isInitialized ? posthog : noopPosthog;
 
+/**
+ * Safely captures an exception in PostHog with strict PII filtering.
+ * Prevents customer names, phone numbers, addresses, and sensitive data
+ * from ever leaking into error tracking logs.
+ */
+export const captureAppException = (
+  error: unknown,
+  context?: Record<string, unknown>
+) => {
+  try {
+    const ph = getPostHog();
+
+    const sanitizedContext: Record<string, unknown> = {};
+    if (context) {
+      const sensitiveKeys = new Set([
+        'customer_name',
+        'name',
+        'phone',
+        'customer_phone',
+        'address',
+        'customer_address',
+        'notes',
+        'delivery_notes',
+        'password',
+        'token',
+        'secret',
+        'email',
+      ]);
+
+      for (const [key, value] of Object.entries(context)) {
+        if (!sensitiveKeys.has(key.toLowerCase())) {
+          sanitizedContext[key] = value;
+        }
+      }
+    }
+
+    ph.captureException(error, sanitizedContext);
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[PostHog] Failed to capture exception:', err);
+    }
+  }
+};
+
 // Keep named export for backward-compat with direct imports
 export { posthog };
+
