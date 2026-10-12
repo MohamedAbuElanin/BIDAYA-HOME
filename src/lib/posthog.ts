@@ -101,8 +101,14 @@ const noopPosthog = {
   captureException: noop,
 } as unknown as typeof posthog;
 
-export const getPostHog = (): typeof posthog =>
-  isInitialized ? posthog : noopPosthog;
+export const getPostHog = (): typeof posthog => {
+  // ES modules evaluate dependencies before `main.tsx` runs. Some modules
+  // (such as analytics.ts) use PostHog during their own initialization, so
+  // initialise lazily here as well to avoid losing that first identification.
+  if (!isInitialized) initPostHog();
+
+  return isInitialized ? posthog : noopPosthog;
+};
 
 /**
  * Safely captures an exception in PostHog with strict PII filtering.

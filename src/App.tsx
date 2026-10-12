@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './index.css';
-
-// Context
 import { CartProvider } from './context/CartContext';
 import { LanguageProvider } from './context/LanguageContext';
-
-// Common Components
+import { ProductPreferencesProvider, useProductPreferences } from './context/ProductPreferencesContext';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { CartDrawer } from './components/common/CartDrawer';
@@ -13,8 +11,7 @@ import { CheckoutModal } from './components/common/CheckoutModal';
 import { Toast } from './components/common/Toast';
 import { WhatsAppFloatingButton } from './components/common/WhatsAppFloatingButton';
 import { ProductModal } from './components/common/ProductModal';
-
-// Customer Pages
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { HeroSection } from './components/customer/HeroSection';
 import { CategorySection } from './components/customer/CategorySection';
 import { FeaturedProductsSection } from './components/customer/FeaturedProductsSection';
@@ -24,8 +21,8 @@ import { CategoriesPage } from './components/customer/CategoriesPage';
 import { OffersPage } from './components/customer/OffersPage';
 import { AboutPage } from './components/customer/AboutPage';
 import { ContactPage } from './components/customer/ContactPage';
-
-// Admin Components
+import { NotFoundPage } from './components/customer/NotFoundPage';
+import { ProductCollectionPage } from './components/customer/ProductCollectionPage';
 import { AdminAuth } from './components/admin/AdminAuth';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { DashboardOverview } from './components/admin/DashboardOverview';
@@ -38,196 +35,72 @@ import { AnalyticsDashboard } from './components/admin/AnalyticsDashboard';
 import { UsersManagement } from './components/admin/UsersManagement';
 import { ActivityLogs } from './components/admin/ActivityLogs';
 import { SettingsManagement } from './components/admin/SettingsManagement';
-
-// Services & Types
 import { analytics } from './services/analytics';
 import type { AdminUser, Product } from './types';
 
-type CustomerRoute = 'home' | 'catalog' | 'categories' | 'offers' | 'about' | 'contact';
 type AdminTab = 'dashboard' | 'products' | 'categories' | 'brands' | 'orders' | 'customers' | 'analytics' | 'users' | 'logs' | 'settings';
 
-const App: React.FC = () => {
-  const [currentRoute, setCurrentRoute] = useState<CustomerRoute>('home');
-  const [isAdminMode, setIsAdminMode] = useState(false);
+const paths: Record<string, string> = { home: '/', catalog: '/catalog', categories: '/categories', offers: '/offers', about: '/about', contact: '/contact', wishlist: '/wishlist', compare: '/compare', admin: '/admin' };
+
+const Storefront: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { wishlistIds, compareIds } = useProductPreferences();
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | undefined>(undefined);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const routeName = Object.entries(paths).find(([, path]) => path === location.pathname)?.[0] || 'not-found';
+  const params = new URLSearchParams(location.search);
 
-  // Track page changes & scroll to top.
-  // Fires on mount (currentRoute='home') and on every subsequent route change.
-  // The empty-dependency effect was removed to prevent double PAGE_VIEW{home} on initial load.
   useEffect(() => {
-    if (!isAdminMode) {
-      analytics.track('PAGE_VIEW', { page: currentRoute });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [currentRoute, isAdminMode]);
+    if (!location.pathname.startsWith('/admin')) analytics.track('PAGE_VIEW', { page: routeName });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location.pathname, routeName]);
 
-  const handleNavigate = (route: string) => {
-    if (route === 'admin') {
-      setIsAdminMode(true);
-      return;
-    }
-    setCurrentRoute(route as CustomerRoute);
-    setSelectedCategoryId(undefined);
-    setSelectedSubcategoryId(undefined);
+  const go = (route: string) => navigate(paths[route] || '/not-found');
+  const selectCategory = (categoryId: string, subcategoryId?: string) => {
+    const next = new URLSearchParams({ category: categoryId });
+    if (subcategoryId) next.set('subcategory', subcategoryId);
+    navigate(`/catalog?${next.toString()}`);
   };
+  const openProduct = (product: Product) => { setSelectedProduct(product); analytics.track('PRODUCT_VIEW', { product_id: product.id }); };
 
-  const handleSelectCategory = (categoryId: string, subcategoryId?: string) => {
-    setSelectedCategoryId(categoryId);
-    setSelectedSubcategoryId(subcategoryId);
-    setCurrentRoute('catalog');
-  };
-
-  const handleOpenDetails = (product: Product) => {
-    setSelectedProduct(product);
-    analytics.track('PRODUCT_VIEW', { product_id: product.id });
-  };
-
-  const handleCloseDetails = () => {
-    setSelectedProduct(null);
-  };
-
-  // ─── ADMIN MODE ───────────────────────────────────────────────────────────
-  if (isAdminMode) {
-    if (!adminUser) {
-      return (
-        <AdminAuth
-          onLoginSuccess={(user) => setAdminUser(user)}
-          onBackToStore={() => {
-            setIsAdminMode(false);
-            setCurrentRoute('home');
-          }}
-        />
-      );
-    }
-
-    const renderAdminContent = () => {
-      switch (adminTab) {
-        case 'dashboard':   return <DashboardOverview onNavigateTab={(tab) => setAdminTab(tab as AdminTab)} />;
-        case 'products':    return <ProductManagement currentUser={adminUser} />;
-        case 'categories':  return <CategoryManagement currentUser={adminUser} />;
-        case 'brands':      return <BrandManagement currentUser={adminUser} />;
-        case 'orders':      return <OrderManagement currentUser={adminUser} />;
-        case 'customers':   return <CustomerManagement />;
-        case 'analytics':   return <AnalyticsDashboard />;
-        case 'users':       return <UsersManagement currentUser={adminUser} />;
-        case 'logs':        return <ActivityLogs />;
-        case 'settings':    return <SettingsManagement currentUser={adminUser} />;
-        default:            return <DashboardOverview onNavigateTab={(tab) => setAdminTab(tab as AdminTab)} />;
-      }
+  const adminContent = () => {
+    if (!adminUser) return <AdminAuth onLoginSuccess={setAdminUser} onBackToStore={() => go('home')} />;
+    const content: Record<AdminTab, React.ReactNode> = {
+      dashboard: <DashboardOverview onNavigateTab={(tab) => setAdminTab(tab as AdminTab)} />, products: <ProductManagement currentUser={adminUser} />,
+      categories: <CategoryManagement currentUser={adminUser} />, brands: <BrandManagement currentUser={adminUser} />,
+      orders: <OrderManagement currentUser={adminUser} />, customers: <CustomerManagement />, analytics: <AnalyticsDashboard />,
+      users: <UsersManagement currentUser={adminUser} />, logs: <ActivityLogs />, settings: <SettingsManagement currentUser={adminUser} />,
     };
-
-    return (
-      <AdminLayout
-        currentUser={adminUser}
-        activeTab={adminTab}
-        onSelectTab={(tab) => setAdminTab(tab as AdminTab)}
-        onLogout={() => {
-          setAdminUser(null);
-          setIsAdminMode(false);
-          setCurrentRoute('home');
-        }}
-        onReturnToStore={() => {
-          setIsAdminMode(false);
-          setCurrentRoute('home');
-        }}
-      >
-        {renderAdminContent()}
-      </AdminLayout>
-    );
-  }
-
-  // ─── CUSTOMER MODE ────────────────────────────────────────────────────────
-  const renderCustomerPage = () => {
-    switch (currentRoute) {
-      case 'catalog':
-        return (
-          <CatalogPage
-            initialCategoryId={selectedCategoryId}
-            initialSubcategoryId={selectedSubcategoryId}
-            onOpenDetails={handleOpenDetails}
-            onSelectCategory={handleSelectCategory}
-          />
-        );
-      case 'categories':
-        return (
-          <CategoriesPage
-            onSelectCategory={handleSelectCategory}
-          />
-        );
-      case 'offers':
-        return (
-          <OffersPage
-            onOpenDetails={handleOpenDetails}
-            onNavigateToProducts={() => setCurrentRoute('catalog')}
-          />
-        );
-      case 'about':
-        return <AboutPage />;
-      case 'contact':
-        return <ContactPage />;
-      case 'home':
-      default:
-        return (
-          <>
-            <HeroSection
-              onNavigate={handleNavigate}
-              onSelectCategory={handleSelectCategory}
-            />
-            <CategorySection
-              onSelectCategory={handleSelectCategory}
-              onViewAllCategories={() => setCurrentRoute('categories')}
-            />
-            <FeaturedProductsSection
-              onOpenDetails={handleOpenDetails}
-              onViewAllProducts={() => setCurrentRoute('catalog')}
-            />
-            <WhyBidayaSection />
-          </>
-        );
-    }
+    return <AdminLayout currentUser={adminUser} activeTab={adminTab} onSelectTab={(tab) => setAdminTab(tab as AdminTab)} onLogout={() => { setAdminUser(null); go('home'); }} onReturnToStore={() => go('home')}>{content[adminTab]}</AdminLayout>;
   };
 
-  return (
-    <LanguageProvider>
-      <CartProvider>
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh' }}>
-        <Navbar
-          currentRoute={currentRoute}
-          onNavigate={handleNavigate}
-          onSelectCategory={handleSelectCategory}
-        />
+  if (location.pathname === '/admin') return <ErrorBoundary key="admin">{adminContent()}</ErrorBoundary>;
 
-        <main style={{ flex: 1 }}>
-          {renderCustomerPage()}
-        </main>
-
-        <Footer
-          onNavigate={handleNavigate}
-          onSelectCategory={handleSelectCategory}
-        />
-
-        {/* Overlays */}
-        <CartDrawer />
-        <CheckoutModal />
-        <Toast />
-        <WhatsAppFloatingButton />
-
-        {/* Product Detail Modal */}
-        {selectedProduct && (
-          <ProductModal
-            product={selectedProduct}
-            onClose={handleCloseDetails}
-            onSelectProduct={handleOpenDetails}
-          />
-        )}
-      </div>
-      </CartProvider>
-    </LanguageProvider>
-  );
+  return <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100svh' }}>
+    <Navbar currentRoute={routeName} onNavigate={go} onSearch={(query) => navigate(`/catalog${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ''}`)} onSelectCategory={selectCategory} />
+    <main style={{ flex: 1 }}>
+      <ErrorBoundary key={location.pathname}>
+        <Routes>
+          <Route path="/" element={<><HeroSection onNavigate={go} onSelectCategory={selectCategory} /><CategorySection onSelectCategory={selectCategory} onViewAllCategories={() => go('categories')} /><FeaturedProductsSection onOpenDetails={openProduct} onViewAllProducts={() => go('catalog')} /><WhyBidayaSection /></>} />
+          <Route path="/catalog" element={<CatalogPage initialCategoryId={params.get('category') || undefined} initialSubcategoryId={params.get('subcategory') || undefined} initialSearchQuery={params.get('q') || ''} onOpenDetails={openProduct} onSelectCategory={selectCategory} />} />
+          <Route path="/categories" element={<CategoriesPage onSelectCategory={selectCategory} />} />
+          <Route path="/offers" element={<OffersPage onOpenDetails={openProduct} onNavigateToProducts={() => go('catalog')} />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/wishlist" element={<ProductCollectionPage type="wishlist" ids={wishlistIds} onOpenDetails={openProduct} onBrowse={() => go('catalog')} />} />
+          <Route path="/compare" element={<ProductCollectionPage type="compare" ids={compareIds} onOpenDetails={openProduct} onBrowse={() => go('catalog')} />} />
+          <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </ErrorBoundary>
+    </main>
+    <Footer onNavigate={go} onSelectCategory={selectCategory} />
+    <CartDrawer /><CheckoutModal /><Toast /><WhatsAppFloatingButton />
+    {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onSelectProduct={openProduct} />}
+  </div>;
 };
 
+const App: React.FC = () => <LanguageProvider><CartProvider><ProductPreferencesProvider><Storefront /></ProductPreferencesProvider></CartProvider></LanguageProvider>;
 export default App;

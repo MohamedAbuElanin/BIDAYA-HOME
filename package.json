@@ -16,7 +16,8 @@
     "lucide-react": "^1.51.0",
     "posthog-js": "^1.438.7",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@posthog/rollup-plugin": "^1.6.1",

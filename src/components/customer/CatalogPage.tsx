@@ -18,6 +18,7 @@ import { dataStore } from '../../services/dataStore';
 import { ProductCard } from '../common/ProductCard';
 import { analytics } from '../../services/analytics';
 import { useLanguage } from '../../context/LanguageContext';
+import { PageSkeleton } from '../common/PageSkeleton';
 
 interface CatalogPageProps {
   initialCategoryId?: string;
@@ -41,6 +42,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
@@ -61,6 +63,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     setProducts(dataStore.getProducts());
     setCategories(dataStore.getCategories());
     setBrands(dataStore.getBrands());
+    setIsLoading(false);
 
     return dataStore.subscribe(() => {
       setProducts(dataStore.getProducts());
@@ -78,9 +81,7 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
   }, [initialCategoryId, initialSubcategoryId]);
 
   useEffect(() => {
-    if (initialSearchQuery) {
-      setSearchQuery(initialSearchQuery);
-    }
+    setSearchQuery(initialSearchQuery);
   }, [initialSearchQuery]);
 
   // Subcategories of selected category
@@ -229,6 +230,8 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({
     filterFeaturedOnly ||
     filterInStockOnly ||
     maxPrice < 1000;
+
+  if (isLoading) return <PageSkeleton />;
 
   return (
     <div style={{ backgroundColor: 'var(--bg-main)', minHeight: '80vh', padding: '36px 0 64px' }}>

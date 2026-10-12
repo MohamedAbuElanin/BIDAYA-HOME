@@ -13,7 +13,9 @@ import {
   Layers,
   ShieldCheck,
   Languages,
-  ChevronDown
+  ChevronDown,
+  Heart,
+  GitCompare
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -21,6 +23,7 @@ import { dataStore } from '../../services/dataStore';
 import { getDirectWhatsAppInquiryUrl } from '../../services/whatsapp';
 import { analytics } from '../../services/analytics';
 import { Category } from '../../types';
+import { useProductPreferences } from '../../context/ProductPreferencesContext';
 
 interface NavbarProps {
   currentRoute: string;
@@ -31,6 +34,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSearch, onSelectCategory }) => {
   const { itemsCount, openCart } = useCart();
+  const { wishlistIds, compareIds } = useProductPreferences();
   const { lang, isRTL, toggleLanguage, t, tx } = useLanguage();
   const [settings, setSettings] = useState(dataStore.getSettings());
   const [categories, setCategories] = useState<Category[]>(dataStore.getCategories());
@@ -51,7 +55,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (onSearch) onSearch(searchQuery);
-    if (currentRoute !== 'catalog') onNavigate('catalog');
     if (searchQuery.trim()) analytics.track('SEARCH', { query: searchQuery });
   };
 
@@ -209,7 +212,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
           </div>
 
           {/* Desktop Search */}
-          <form
+          {currentRoute === 'catalog' && <form
             onSubmit={handleSearchSubmit}
             style={{ flex: '1', maxWidth: '440px', display: 'none', position: 'relative' }}
             className="desktop-search-form"
@@ -256,10 +259,32 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
                 </button>
               )}
             </div>
-          </form>
+          </form>}
 
           {/* Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => onNavigate('wishlist')}
+              className="btn btn-ghost"
+              title={lang === 'ar' ? 'المفضلة' : 'Wishlist'}
+              aria-label={lang === 'ar' ? 'المفضلة' : 'Wishlist'}
+              style={{ position: 'relative', padding: '8px' }}
+            >
+              <Heart size={20} fill={wishlistIds.length ? 'currentColor' : 'none'} />
+              {wishlistIds.length > 0 && <span style={{ position: 'absolute', top: '-4px', insetInlineEnd: '-4px', minWidth: '17px', height: '17px', display: 'grid', placeItems: 'center', borderRadius: '50%', background: 'var(--accent-500)', color: '#fff', fontSize: '0.65rem', fontWeight: 800 }}>{wishlistIds.length}</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('compare')}
+              className="btn btn-ghost"
+              title={lang === 'ar' ? 'مقارنة المنتجات' : 'Compare products'}
+              aria-label={lang === 'ar' ? 'مقارنة المنتجات' : 'Compare products'}
+              style={{ position: 'relative', padding: '8px' }}
+            >
+              <GitCompare size={20} />
+              {compareIds.length > 0 && <span style={{ position: 'absolute', top: '-4px', insetInlineEnd: '-4px', minWidth: '17px', height: '17px', display: 'grid', placeItems: 'center', borderRadius: '50%', background: 'var(--primary-700)', color: '#fff', fontSize: '0.65rem', fontWeight: 800 }}>{compareIds.length}</span>}
+            </button>
             <button
               onClick={openCart}
               className="btn btn-outline"

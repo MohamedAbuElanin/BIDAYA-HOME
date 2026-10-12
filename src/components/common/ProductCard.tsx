@@ -1,10 +1,11 @@
 import React from 'react';
-import { ShoppingBag, Eye, Sparkles, Check, Flame } from 'lucide-react';
+import { ShoppingBag, Eye, Sparkles, Check, Flame, Heart, GitCompare } from 'lucide-react';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { analytics } from '../../services/analytics';
 import { dataStore } from '../../services/dataStore';
 import { useLanguage } from '../../context/LanguageContext';
+import { useProductPreferences } from '../../context/ProductPreferencesContext';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +14,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails }) => {
   const { addToCart, items } = useCart();
+  const { isWishlisted, isCompared, toggleWishlist, toggleCompare } = useProductPreferences();
   const settings = dataStore.getSettings();
   const { lang, t, tx } = useLanguage();
   const productName = lang === 'en' ? (product.name_en || product.name_ar) : product.name_ar;
@@ -46,6 +48,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     addToCart(product, 1);
+  };
+
+  const handlePreference = (e: React.MouseEvent, action: () => void) => {
+    e.stopPropagation();
+    action();
   };
 
   return (
@@ -105,6 +112,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
             e.currentTarget.style.transform = 'scale(1)';
           }}
         />
+
+        <div style={{ position: 'absolute', top: '10px', insetInlineStart: '10px', zIndex: 3, display: 'flex', gap: '6px' }}>
+          <button
+            type="button"
+            onClick={(event) => handlePreference(event, () => toggleWishlist(product.id))}
+            aria-label={isWishlisted(product.id) ? (lang === 'ar' ? 'إزالة من المفضلة' : 'Remove from wishlist') : (lang === 'ar' ? 'إضافة للمفضلة' : 'Add to wishlist')}
+            title={lang === 'ar' ? 'المفضلة' : 'Wishlist'}
+            style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,.94)', color: isWishlisted(product.id) ? 'var(--accent-600)' : 'var(--text-main)', display: 'grid', placeItems: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,.12)' }}
+          ><Heart size={17} fill={isWishlisted(product.id) ? 'currentColor' : 'none'} /></button>
+          <button
+            type="button"
+            onClick={(event) => handlePreference(event, () => toggleCompare(product.id))}
+            aria-label={isCompared(product.id) ? (lang === 'ar' ? 'إزالة من المقارنة' : 'Remove from comparison') : (lang === 'ar' ? 'إضافة للمقارنة' : 'Add to comparison')}
+            title={lang === 'ar' ? 'المقارنة' : 'Compare'}
+            style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,.94)', color: isCompared(product.id) ? 'var(--primary-700)' : 'var(--text-main)', display: 'grid', placeItems: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,.12)' }}
+          ><GitCompare size={17} /></button>
+        </div>
 
         {/* Badges Container */}
         <div
