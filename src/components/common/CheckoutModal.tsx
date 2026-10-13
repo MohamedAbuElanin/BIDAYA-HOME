@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   MessageCircle,
@@ -17,7 +17,7 @@ import {
 import confetti from 'canvas-confetti';
 import { useCart } from '../../context/CartContext';
 import { EGYPTIAN_GOVERNORATES, getDeliveryFeeByGov } from '../../data/egyptianGovernorates';
-import { dataStore } from '../../services/dataStore';
+import { submitCheckout } from '../../services/checkout';
 import { getWhatsAppChatUrl, formatWhatsAppMessage, formatPaymentMethodName } from '../../services/whatsapp';
 import { analytics } from '../../services/analytics';
 import { Order, CustomerInfo, DepositPaymentMethod, RemainingPaymentMethod } from '../../types';
@@ -43,6 +43,9 @@ export const CheckoutModal: React.FC = () => {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
+  // Retained across retries after a lost response; cleared only after a
+  // confirmed persisted order so a click/retry cannot create a second order.
+  const idempotencyKeyRef = useRef<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -148,41 +151,21 @@ export const CheckoutModal: React.FC = () => {
     });
 
     try {
-      // 2. Prepare Order items
-      const orderItems = items.map(item => ({
-        product_id: item.product.id,
-        product_name: item.product.name_ar,
-        product_sku: item.product.sku,
-        product_image: item.selected_image,
-        unit_price: item.product.price,
-        pricing_mode: item.product.pricing_mode,
-        quantity: item.quantity,
-        total_price: item.product.price * item.quantity
-      }));
-
-      // 3. Create Order — saves synchronously to localStorage.
-      //    Supabase insert is fire-and-forget inside createOrder(); we cannot
-      //    await it here without a larger architectural change (async createOrder).
-      //    ORDER_CREATED therefore means: saved to localStorage ✓, Supabase: pending.
-      const order = dataStore.createOrder({
+      // The Edge Function is the authority for prices, delivery, balances,
+      // persistence and idempotency. WhatsApp is not opened before it returns.
+      const { order } = await submitCheckout({
         customer: {
           ...formData,
           alternate_phone: formData.alternate_phone?.trim() || undefined,
           notes: formData.notes?.trim() || undefined
         },
-        items: orderItems,
-        total_amount: totalAmount,
-        deposit_percentage: 50,
-        deposit_amount: depositAmount,
-        deposit_payment_method: depositMethod as DepositPaymentMethod,
-        remaining_percentage: 50,
-        remaining_amount: remainingAmount,
-        remaining_payment_method: remainingMethod as RemainingPaymentMethod,
-        delivery_fee: deliveryFeeInfo.fee,
-        delivery_fee_text: deliveryFeeDisplay,
-        visitor_id: analytics.getVisitorId(),
-        device_type: analytics.getDeviceType(),
-        traffic_source: analytics.getTrafficSource()
+        items,
+        depositPaymentMethod: depositMethod as DepositPaymentMethod,
+        remainingPaymentMethod: remainingMethod as RemainingPaymentMethod,
+        visitorId: analytics.getVisitorId(),
+        deviceType: analytics.getDeviceType(),
+        trafficSource: analytics.getTrafficSource(),
+        idempotencyKey: idempotencyKeyRef.current || (idempotencyKeyRef.current = crypto.randomUUID())
       });
 
       // Stage 2: ORDER_CREATED — localStorage save confirmed (synchronous).
@@ -200,6 +183,7 @@ export const CheckoutModal: React.FC = () => {
       });
 
       setCreatedOrder(order);
+      idempotencyKeyRef.current = null;
       clearCart();
 
       // Confetti celebration

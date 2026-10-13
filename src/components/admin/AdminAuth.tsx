@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Mail, ArrowLeft, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
-import { AdminUser, AdminRole } from '../../types';
-import { dataStore } from '../../services/dataStore';
+import { ShieldCheck, Lock, Mail, ArrowRight } from 'lucide-react';
+import { AdminUser } from '../../types';
+import { getSupabaseClient } from '../../lib/supabase';
 
 interface AdminAuthProps {
   onLoginSuccess: (user: AdminUser) => void;
@@ -9,50 +9,34 @@ interface AdminAuthProps {
 }
 
 export const AdminAuth: React.FC<AdminAuthProps> = ({ onLoginSuccess, onBackToStore }) => {
-  const [email, setEmail] = useState('admin@bidayahome.com');
-  const [password, setPassword] = useState('admin123');
-  const [selectedRole, setSelectedRole] = useState<AdminRole>('super_admin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const adminUsers = dataStore.getAdminUsers();
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       setError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
       return;
     }
 
-    // Match or create admin user session
-    const existing = adminUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-    const user: AdminUser = existing || {
-      id: `usr-${Date.now()}`,
-      name: email.split('@')[0],
-      email: email,
-      role: selectedRole,
-      last_login_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
-    };
-
-    user.last_login_at = new Date().toISOString();
-    dataStore.logActivity(user, 'تسجيل دخول للنظام', 'auth', user.id, user.name, `تم الدخول بنجاح بصلاحية ${user.role}`);
-
-    onLoginSuccess(user);
-  };
-
-  const handleQuickRoleSelect = (role: AdminRole, userEmail: string, userName: string) => {
-    setEmail(userEmail);
-    setSelectedRole(role);
-    const user: AdminUser = {
-      id: `usr-${role}`,
-      name: userName,
-      email: userEmail,
-      role: role,
-      last_login_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
-    };
-    dataStore.logActivity(user, 'تسجيل دخول سريع للنظام', 'auth', user.id, user.name, `تم الدخول بصلاحية ${role}`);
-    onLoginSuccess(user);
+    const client = getSupabaseClient();
+    if (!client) { setError('إعداد تسجيل الدخول الآمن غير مكتمل.'); return; }
+    setIsSubmitting(true);
+    setError('');
+    try {
+      const { data: auth, error: authError } = await client.auth.signInWithPassword({ email: email.trim(), password });
+      if (authError || !auth.user) throw new Error('بيانات تسجيل الدخول غير صحيحة.');
+      const { data: admin, error: adminError } = await client.from('admin_users').select('id,name,email,role,avatar_url,last_login_at,created_at').eq('auth_user_id', auth.user.id).maybeSingle();
+      if (adminError || !admin) {
+        await client.auth.signOut();
+        throw new Error('هذا الحساب غير مخول للوصول إلى لوحة الإدارة.');
+      }
+      onLoginSuccess(admin as AdminUser);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'تعذر تسجيل الدخول.');
+    } finally { setIsSubmitting(false); }
   };
 
   return (
@@ -122,82 +106,6 @@ export const AdminAuth: React.FC<AdminAuthProps> = ({ onLoginSuccess, onBackToSt
           </p>
         </div>
 
-        {/* Quick Demo Logins Selection */}
-        <div style={{ marginBottom: '24px', padding: '12px', backgroundColor: '#0F172A', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginBottom: '8px', fontWeight: 700 }}>
-            تسجيل دخول تجريبي سريع حسب الدور:
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => handleQuickRoleSelect('super_admin', 'admin@bidayahome.com', 'المدير العام')}
-              style={{
-                padding: '8px',
-                borderRadius: '6px',
-                border: '1px solid rgba(56, 149, 93, 0.4)',
-                backgroundColor: 'rgba(56, 149, 93, 0.15)',
-                color: '#4ADE80',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              👑 Super Admin
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickRoleSelect('order_manager', 'orders@bidayahome.com', 'مسؤول المبيعات')}
-              style={{
-                padding: '8px',
-                borderRadius: '6px',
-                border: '1px solid rgba(14, 165, 233, 0.4)',
-                backgroundColor: 'rgba(14, 165, 233, 0.15)',
-                color: '#38BDF8',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              📦 مدير الطلبات
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickRoleSelect('catalog_manager', 'catalog@bidayahome.com', 'مدير الكتالوج')}
-              style={{
-                padding: '8px',
-                borderRadius: '6px',
-                border: '1px solid rgba(217, 112, 54, 0.4)',
-                backgroundColor: 'rgba(217, 112, 54, 0.15)',
-                color: '#FB923C',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              🏷️ مدير الكتالوج
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickRoleSelect('admin', 'manager@bidayahome.com', 'مدير النظام')}
-              style={{
-                padding: '8px',
-                borderRadius: '6px',
-                border: '1px solid rgba(139, 92, 246, 0.4)',
-                backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                color: '#C084FC',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              ⚡ Admin عام
-            </button>
-          </div>
-        </div>
-
         {/* Form */}
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {error && (
@@ -262,10 +170,11 @@ export const AdminAuth: React.FC<AdminAuthProps> = ({ onLoginSuccess, onBackToSt
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="btn btn-primary btn-lg"
             style={{ width: '100%', marginTop: '8px', fontWeight: 800, borderRadius: 'var(--radius-md)' }}
           >
-            <span>دخول لوحة التحكم</span>
+            <span>{isSubmitting ? 'جارٍ التحقق...' : 'دخول لوحة التحكم'}</span>
           </button>
         </form>
 

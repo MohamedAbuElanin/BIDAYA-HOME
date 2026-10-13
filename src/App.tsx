@@ -36,6 +36,7 @@ import { UsersManagement } from './components/admin/UsersManagement';
 import { ActivityLogs } from './components/admin/ActivityLogs';
 import { SettingsManagement } from './components/admin/SettingsManagement';
 import { analytics } from './services/analytics';
+import { getSupabaseClient } from './lib/supabase';
 import type { AdminUser, Product } from './types';
 
 type AdminTab = 'dashboard' | 'products' | 'categories' | 'brands' | 'orders' | 'customers' | 'analytics' | 'users' | 'logs' | 'settings';
@@ -73,7 +74,7 @@ const Storefront: React.FC = () => {
       orders: <OrderManagement currentUser={adminUser} />, customers: <CustomerManagement />, analytics: <AnalyticsDashboard />,
       users: <UsersManagement currentUser={adminUser} />, logs: <ActivityLogs />, settings: <SettingsManagement currentUser={adminUser} />,
     };
-    return <AdminLayout currentUser={adminUser} activeTab={adminTab} onSelectTab={(tab) => setAdminTab(tab as AdminTab)} onLogout={() => { setAdminUser(null); go('home'); }} onReturnToStore={() => go('home')}>{content[adminTab]}</AdminLayout>;
+    return <AdminLayout currentUser={adminUser} activeTab={adminTab} onSelectTab={(tab) => setAdminTab(tab as AdminTab)} onLogout={() => { void getSupabaseClient()?.auth.signOut(); setAdminUser(null); go('home'); }} onReturnToStore={() => go('home')}>{content[adminTab]}</AdminLayout>;
   };
 
   if (location.pathname === '/admin') return <ErrorBoundary key="admin">{adminContent()}</ErrorBoundary>;
