@@ -56,12 +56,14 @@ class DataStoreService {
     }
   }
 
-  private save<T>(key: string, data: T): void {
+  private save<T>(key: string, data: T): boolean {
     try {
       localStorage.setItem(key, JSON.stringify(data));
       this.notifyListeners();
+      return true;
     } catch (e) {
       console.warn(`Error saving ${key} to storage:`, e);
+      return false;
     }
   }
 
@@ -560,7 +562,9 @@ class DataStoreService {
       }
     }
 
-    this.save(STORAGE_KEYS.PRODUCTS, list);
+    if (!this.save(STORAGE_KEYS.PRODUCTS, list)) {
+      throw new Error('تعذر حفظ المنتج. قد تكون مساحة التخزين ممتلئة؛ احذف صورة أو استخدم صورة أصغر.');
+    }
     return updatedProduct;
   }
 

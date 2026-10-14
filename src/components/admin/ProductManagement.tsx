@@ -18,6 +18,54 @@ import {
 import { Product, Category, Brand, PricingMode, AdminUser, ProductSpecification } from '../../types';
 import { dataStore } from '../../services/dataStore';
 
+const MAX_UPLOAD_SIZE = 15 * 1024 * 1024;
+const MAX_COMPRESSED_IMAGE_SIZE = 500 * 1024;
+
+const compressImage = async (file: File): Promise<string> => {
+  if (!file.type.startsWith('image/')) {
+    throw new Error(`الملف "${file.name}" ليس صورة صالحة.`);
+  }
+  if (file.size > MAX_UPLOAD_SIZE) {
+    throw new Error(`حجم الصورة "${file.name}" أكبر من الحد المسموح (15 ميجابايت).`);
+  }
+
+  const bitmap = await createImageBitmap(file);
+  try {
+    const maxDimension = 1400;
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('تعذر تجهيز الصورة للرفع.');
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    let compressedBlob: Blob | null = null;
+    for (const quality of [0.82, 0.7, 0.58, 0.46]) {
+      compressedBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, 'image/webp', quality);
+      });
+      if (compressedBlob && compressedBlob.size <= MAX_COMPRESSED_IMAGE_SIZE) break;
+    }
+    if (!compressedBlob) throw new Error('تعذر ضغط الصورة.');
+    if (compressedBlob.size > MAX_COMPRESSED_IMAGE_SIZE) {
+      throw new Error(`تعذر ضغط الصورة "${file.name}" إلى الحجم المطلوب.`);
+    }
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') resolve(reader.result);
+        else reject(new Error('تعذر قراءة الصورة بعد تجهيزها.'));
+      };
+      reader.onerror = () => reject(new Error('تعذر قراءة ملف الصورة.'));
+      reader.readAsDataURL(compressedBlob);
+    });
+  } finally {
+    bitmap.close();
+  }
+};
+
 interface ProductManagementProps {
   currentUser: AdminUser;
 }
@@ -49,6 +97,9 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
   const [formShortDesc, setFormShortDesc] = useState('');
   const [formImages, setFormImages] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [imageUploadError, setImageUploadError] = useState('');
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [formError, setFormError] = useState('');
   const [formPrimaryImgIdx, setFormPrimaryImgIdx] = useState(0);
   const [formIsFeatured, setFormIsFeatured] = useState(false);
   const [formIsNew, setFormIsNew] = useState(true);
@@ -82,7 +133,10 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
     setFormBrandId(brands[0]?.id || '');
     setFormDescription('');
     setFormShortDesc('');
-    setFormImages(['https://images.unsplash.com/photo-1584473457406-6240486418e9?w=800&auto=format&fit=crop&q=80']);
+    setFormImages([]);
+    setNewImageUrl('');
+    setImageUploadError('');
+    setFormError('');
     setFormPrimaryImgIdx(0);
     setFormIsFeatured(false);
     setFormIsNew(true);
@@ -109,6 +163,9 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
     setFormDescription(p.description);
     setFormShortDesc(p.short_description || '');
     setFormImages(p.images || []);
+    setNewImageUrl('');
+    setImageUploadError('');
+    setFormError('');
     setFormPrimaryImgIdx(p.primary_image_index || 0);
     setFormIsFeatured(p.is_featured);
     setFormIsNew(p.is_new);
@@ -122,38 +179,63 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
     e.preventDefault();
     if (!formNameAr.trim() || !formCategoryId) return;
 
-    dataStore.saveProduct(
-      {
-        id: editingProduct?.id,
-        name_ar: formNameAr,
-        sku: formSku,
-        price: Number(formPrice),
-        old_price: formOldPrice ? Number(formOldPrice) : undefined,
-        pricing_mode: formPricingMode,
-        category_id: formCategoryId,
-        subcategory_id: formSubcategoryId || undefined,
-        product_type: formProductType || undefined,
-        brand_id: formBrandId || undefined,
-        description: formDescription,
-        short_description: formShortDesc,
-        images: formImages.length > 0 ? formImages : ['https://images.unsplash.com/photo-1584473457406-6240486418e9?w=800&auto=format&fit=crop&q=80'],
-        primary_image_index: formPrimaryImgIdx,
-        is_featured: formIsFeatured,
-        is_new: formIsNew,
-        is_offer: formIsOffer,
-        is_available: formIsAvailable,
-        specifications: formSpecs
-      },
-      currentUser
-    );
+    try {
+      dataStore.saveProduct(
+        {
+          id: editingProduct?.id,
+          name_ar: formNameAr,
+          sku: formSku,
+          price: Number(formPrice),
+          old_price: formOldPrice ? Number(formOldPrice) : undefined,
+          pricing_mode: formPricingMode,
+          category_id: formCategoryId,
+          subcategory_id: formSubcategoryId || undefined,
+          product_type: formProductType || undefined,
+          brand_id: formBrandId || undefined,
+          description: formDescription,
+          short_description: formShortDesc,
+          images: formImages.length > 0 ? formImages : ['https://images.unsplash.com/photo-1584473457406-6240486418e9?w=800&auto=format&fit=crop&q=80'],
+          primary_image_index: formPrimaryImgIdx,
+          is_featured: formIsFeatured,
+          is_new: formIsNew,
+          is_offer: formIsOffer,
+          is_available: formIsAvailable,
+          specifications: formSpecs
+        },
+        currentUser
+      );
 
-    setIsModalOpen(false);
+      setIsModalOpen(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'تعذر حفظ المنتج. حاول مرة أخرى.');
+    }
+  };
+
+  const handleImageFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (files.length === 0) return;
+
+    setIsUploadingImages(true);
+    setImageUploadError('');
+    try {
+      const uploadedImages: string[] = [];
+      for (const file of files) {
+        uploadedImages.push(await compressImage(file));
+      }
+      setFormImages((images) => [...images, ...uploadedImages]);
+    } catch (error) {
+      setImageUploadError(error instanceof Error ? error.message : 'تعذر رفع الصورة. حاول مرة أخرى.');
+    } finally {
+      setIsUploadingImages(false);
+    }
   };
 
   const handleAddImage = () => {
     if (newImageUrl.trim()) {
       setFormImages([...formImages, newImageUrl.trim()]);
       setNewImageUrl('');
+      setImageUploadError('');
     }
   };
 
@@ -760,7 +842,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
               {/* Images Manager */}
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px' }}>
-                  صور المنتج (روابط الصور وتحديد الصورة الرئيسية):
+                  صور المنتج (ارفع صورة من جهازك أو أضف رابطاً):
                 </label>
                 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -779,7 +861,31 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
                     <Plus size={16} />
                     <span>إضافة صورة</span>
                   </button>
+                  <label
+                    className="btn btn-outline btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: isUploadingImages ? 'wait' : 'pointer', opacity: isUploadingImages ? 0.65 : 1 }}
+                  >
+                    <ImageIcon size={16} />
+                    <span>{isUploadingImages ? 'جاري تجهيز الصور...' : 'اختيار من الجهاز'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled={isUploadingImages}
+                      onChange={handleImageFiles}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
                 </div>
+
+                <p style={{ margin: '-4px 0 10px', color: '#64748B', fontSize: '0.78rem' }}>
+                  يتم ضغط الصور تلقائياً قبل حفظها، بحد أقصى 15 ميجابايت للصورة.
+                </p>
+                {imageUploadError && (
+                  <p role="alert" style={{ margin: '0 0 10px', color: '#B91C1C', fontSize: '0.82rem' }}>
+                    {imageUploadError}
+                  </p>
+                )}
 
                 {/* Images Thumbnails with Primary selector */}
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -937,10 +1043,15 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                {formError && (
+                  <p role="alert" style={{ margin: '0 auto 0 0', alignSelf: 'center', color: '#B91C1C', fontSize: '0.82rem' }}>
+                    {formError}
+                  </p>
+                )}
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">
                   إلغاء
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '10px 28px', fontWeight: 800 }}>
+                <button type="submit" disabled={isUploadingImages} className="btn btn-primary" style={{ padding: '10px 28px', fontWeight: 800, opacity: isUploadingImages ? 0.65 : 1 }}>
                   <span>حفظ المنتج</span>
                 </button>
               </div>
