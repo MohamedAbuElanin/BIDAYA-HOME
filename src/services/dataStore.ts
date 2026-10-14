@@ -524,7 +524,13 @@ class DataStoreService {
         const { error: uploadError } = await supabase.storage
           .from('product-images')
           .upload(path, file, { contentType: file.type, upsert: true });
-        if (uploadError) throw new Error(`تعذر رفع صورة المنتج: ${uploadError.message}`);
+        if (uploadError) {
+          const isPolicyError = uploadError.message.toLowerCase().includes('row-level security');
+          const message = isPolicyError
+            ? 'صلاحية رفع صور المنتجات غير مفعّلة في Supabase. طبّق migration ‏20261014000100_product_image_storage.sql، وتأكد أن حسابك يحمل دور super_admin أو admin أو catalog_manager.'
+            : uploadError.message;
+          throw new Error(`تعذر رفع صورة المنتج: ${message}`);
+        }
         uploadedPaths.push(path);
         images.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl);
       }
