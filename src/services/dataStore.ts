@@ -503,7 +503,111 @@ class DataStoreService {
     return this.getProducts(true).find(p => p.slug === slug);
   }
 
-  public saveProduct(product: Partial<Product> & { name_ar: string; sku: string; price: number; category_id: string }, adminUser?: AdminUser): Product {
+  private async persistProductImages(product: Product): Promise<string[]> {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error('اتصال قاعدة البيانات غير متاح. سجّل الدخول مرة أخرى أو تحقق من إعدادات الموقع.');
+
+    const uploadedPaths: string[] = [];
+    try {
+      const images: string[] = [];
+      for (const [index, image] of product.images.entries()) {
+        if (!image.startsWith('data:')) {
+          images.push(image);
+          continue;
+        }
+
+        const response = await fetch(image);
+        if (!response.ok) throw new Error('تعذر تجهيز إحدى صور المنتج.');
+        const file = await response.blob();
+        const extension = file.type === 'image/webp' ? 'webp' : file.type === 'image/png' ? 'png' : file.type === 'image/jpeg' ? 'jpg' : 'img';
+        const path = `${product.id}/${index}.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(path, file, { contentType: file.type, upsert: true });
+        if (uploadError) throw new Error(`تعذر رفع صورة المنتج: ${uploadError.message}`);
+        uploadedPaths.push(path);
+        images.push(supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl);
+      }
+      return images;
+    } catch (error) {
+      if (uploadedPaths.length > 0) {
+        const { error: cleanupError } = await supabase.storage.from('product-images').remove(uploadedPaths);
+        if (cleanupError) console.error('Failed to clean up product image uploads:', cleanupError.message);
+      }
+      throw error;
+    }
+  }
+
+  private async ensureProductReferences(product: Product): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error('اتصال قاعدة البيانات غير متاح.');
+
+    const category = this.getCategories(true).find((item) => item.id === product.category_id);
+    if (!category) throw new Error('القسم المحدد غير موجود.');
+
+    const { data: existingCategory, error: categoryReadError } = await supabase
+      .from('categories').select('id').eq('id', category.id).maybeSingle();
+    if (categoryReadError) throw new Error(`تعذر التحقق من القسم في قاعدة البيانات: ${categoryReadError.message}`);
+    if (!existingCategory) {
+      const { error } = await supabase.from('categories').insert({
+        id: category.id,
+        name_ar: category.name_ar,
+        name_en: category.name_en || null,
+        slug: category.slug,
+        icon: category.icon || null,
+        image_url: category.image_url,
+        description: category.description || null,
+        display_order: category.display_order,
+        is_active: category.is_active,
+        is_archived: category.is_archived || false
+      });
+      if (error) throw new Error(`تعذر حفظ القسم المطلوب في قاعدة البيانات: ${error.message}`);
+    }
+
+    if (product.subcategory_id) {
+      const subcategory = category.subcategories?.find((item) => item.id === product.subcategory_id);
+      if (!subcategory) throw new Error('التصنيف الفرعي المحدد غير موجود.');
+      const { data: existingSubcategory, error: subcategoryReadError } = await supabase
+        .from('subcategories').select('id').eq('id', subcategory.id).eq('category_id', category.id).maybeSingle();
+      if (subcategoryReadError) throw new Error(`تعذر التحقق من التصنيف الفرعي في قاعدة البيانات: ${subcategoryReadError.message}`);
+      if (!existingSubcategory) {
+        const { error } = await supabase.from('subcategories').insert({
+          id: subcategory.id,
+          category_id: category.id,
+          name_ar: subcategory.name_ar,
+          name_en: subcategory.name_en || null,
+          slug: subcategory.slug,
+          product_types: subcategory.product_types || [],
+          display_order: subcategory.display_order || 0,
+          is_archived: subcategory.is_archived || false
+        });
+        if (error) throw new Error(`تعذر حفظ التصنيف الفرعي في قاعدة البيانات: ${error.message}`);
+      }
+    }
+
+    if (product.brand_id) {
+      const brand = this.getBrands(true).find((item) => item.id === product.brand_id);
+      if (!brand) throw new Error('العلامة التجارية المحددة غير موجودة.');
+      const { data: existingBrand, error: brandReadError } = await supabase
+        .from('brands').select('id').eq('id', brand.id).maybeSingle();
+      if (brandReadError) throw new Error(`تعذر التحقق من العلامة التجارية في قاعدة البيانات: ${brandReadError.message}`);
+      if (!existingBrand) {
+        const { error } = await supabase.from('brands').insert({
+          id: brand.id,
+          name_ar: brand.name_ar,
+          name_en: brand.name_en || null,
+          slug: brand.slug,
+          logo_url: brand.logo_url || null,
+          description: brand.description || null,
+          is_active: brand.is_active,
+          is_archived: brand.is_archived || false
+        });
+        if (error) throw new Error(`تعذر حفظ العلامة التجارية في قاعدة البيانات: ${error.message}`);
+      }
+    }
+  }
+
+  public async saveProduct(product: Partial<Product> & { name_ar: string; sku: string; price: number; category_id: string }, adminUser?: AdminUser): Promise<Product> {
     const list = this.getProducts(true);
     let updatedProduct: Product;
 
@@ -519,9 +623,6 @@ class DataStoreService {
           updated_at: new Date().toISOString()
         } as Product;
         list[idx] = updatedProduct;
-        if (adminUser) {
-          this.logActivity(adminUser, 'تعديل منتج', 'product', updatedProduct.id, updatedProduct.name_ar, `تم تحديث بيانات وسعر منتج SKU: ${updatedProduct.sku}`);
-        }
       } else {
         throw new Error('Product not found');
       }
@@ -557,15 +658,48 @@ class DataStoreService {
         is_archived: false
       };
       list.push(updatedProduct);
-      if (adminUser) {
-        this.logActivity(adminUser, 'إضافة منتج جديد', 'product', updatedProduct.id, updatedProduct.name_ar, `تمت إضافة منتج جديد SKU: ${updatedProduct.sku}`);
-      }
     }
 
+    await this.ensureProductReferences(updatedProduct);
+    updatedProduct.images = await this.persistProductImages(updatedProduct);
+
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error('اتصال قاعدة البيانات غير متاح.');
+    const { error: databaseError } = await supabase.from('products').upsert(updatedProduct, { onConflict: 'id' });
+    if (databaseError) throw new Error(`تعذر حفظ المنتج في قاعدة البيانات: ${databaseError.message}`);
+
     if (!this.save(STORAGE_KEYS.PRODUCTS, list)) {
-      throw new Error('تعذر حفظ المنتج. قد تكون مساحة التخزين ممتلئة؛ احذف صورة أو استخدم صورة أصغر.');
+      console.warn('Product was saved to Supabase, but the browser cache could not be updated.');
+      this.notifyListeners();
+    }
+    if (adminUser) {
+      const isUpdate = Boolean(product.id);
+      this.logActivity(
+        adminUser,
+        isUpdate ? 'تعديل منتج' : 'إضافة منتج جديد',
+        'product',
+        updatedProduct.id,
+        updatedProduct.name_ar,
+        isUpdate
+          ? `تم تحديث بيانات وسعر منتج SKU: ${updatedProduct.sku}`
+          : `تمت إضافة منتج جديد SKU: ${updatedProduct.sku}`
+      );
     }
     return updatedProduct;
+  }
+
+  public async refreshProductsFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) throw new Error(`تعذر تحميل المنتجات من قاعدة البيانات: ${error.message}`);
+    if (!data) return;
+
+    const localProducts = this.getProducts(true);
+    const productsById = new Map(localProducts.map((product) => [product.id, product]));
+    for (const product of data as Product[]) productsById.set(product.id, product);
+    this.save(STORAGE_KEYS.PRODUCTS, [...productsById.values()]);
   }
 
   public archiveProduct(id: string, adminUser?: AdminUser): void {
@@ -630,6 +764,29 @@ class DataStoreService {
 
   public getOrders(): Order[] {
     return this.load<Order[]>(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
+  }
+
+  public async refreshOrdersFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error('اتصال قاعدة البيانات غير متاح.');
+
+    const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+    if (error) throw new Error(`تعذر تحميل الطلبات من قاعدة البيانات: ${error.message}`);
+
+    const storedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
+    const demoOrderIds = new Set(INITIAL_ORDERS.map((order) => order.id));
+    const localOrders = storedOrders
+      ? (JSON.parse(storedOrders) as Order[]).filter((order) => !demoOrderIds.has(order.id))
+      : [];
+    const ordersById = new Map(localOrders.map((order) => [order.id, order]));
+    for (const row of data || []) {
+      const orderRow = row as typeof row & { customer_info?: CustomerInfo };
+      const { customer_info, ...orderFields } = orderRow;
+      if (!customer_info) throw new Error(`بيانات العميل غير موجودة للطلب ${orderRow.id}.`);
+      ordersById.set(orderRow.id, { ...orderFields, customer: customer_info } as Order);
+    }
+
+    this.save(STORAGE_KEYS.ORDERS, [...ordersById.values()]);
   }
 
   public getOrderById(id: string): Order | undefined {

@@ -24,14 +24,16 @@ through a failed/lost-response retry and clears it only after confirmation.
 The checkout cannot save orders until its database schema, delivery data, and
 Edge Function are installed in the same Supabase project:
 
-1. Link a dedicated staging project and apply the reviewed migration:
+1. Link a dedicated staging project and apply the reviewed schema and image
+   storage migrations:
    `supabase link --project-ref <staging-project-ref>`, then
    `supabase db push`.
 2. Generate and apply the delivery-zone seed SQL with
-   `npm run generate:delivery-seed`. Also populate `products` using the product
-   IDs used by the storefront and add a `site_settings` row with
-   `enable_ordering` enabled. The storefront catalog/settings still live in
-   browser `localStorage`; they are not automatically copied to Supabase.
+   `npm run generate:delivery-seed`. Add a `site_settings` row with
+   `enable_ordering` enabled. Existing local products are not automatically
+   imported; products saved through the admin after deployment are written to
+   Supabase, and their selected category, subcategory, and brand are created if
+   missing.
 3. Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
    `CHECKOUT_ALLOWED_ORIGIN` (the exact deployed storefront origin, including
    scheme and port if applicable) in the Edge Function secrets. Never put the

@@ -37,6 +37,8 @@ import { ActivityLogs } from './components/admin/ActivityLogs';
 import { SettingsManagement } from './components/admin/SettingsManagement';
 import { analytics } from './services/analytics';
 import { getSupabaseClient } from './lib/supabase';
+import { dataStore } from './services/dataStore';
+import { captureAppException } from './lib/posthog';
 import type { AdminUser, Product } from './types';
 
 type AdminTab = 'dashboard' | 'products' | 'categories' | 'brands' | 'orders' | 'customers' | 'analytics' | 'users' | 'logs' | 'settings';
@@ -57,6 +59,13 @@ const Storefront: React.FC = () => {
     if (!location.pathname.startsWith('/admin')) analytics.track('PAGE_VIEW', { page: routeName });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location.pathname, routeName]);
+
+  useEffect(() => {
+    dataStore.refreshProductsFromDatabase().catch((error: unknown) => {
+      console.error('Failed to load catalog products from the database:', error);
+      captureAppException(error, { source: 'catalog.remote_load' });
+    });
+  }, []);
 
   const go = (route: string) => navigate(paths[route] || '/not-found');
   const selectCategory = (categoryId: string, subcategoryId?: string) => {

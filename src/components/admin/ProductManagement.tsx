@@ -99,6 +99,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
   const [newImageUrl, setNewImageUrl] = useState('');
   const [imageUploadError, setImageUploadError] = useState('');
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [formError, setFormError] = useState('');
   const [formPrimaryImgIdx, setFormPrimaryImgIdx] = useState(0);
   const [formIsFeatured, setFormIsFeatured] = useState(false);
@@ -175,12 +176,14 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
     setIsModalOpen(true);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNameAr.trim() || !formCategoryId) return;
 
+    setIsSavingProduct(true);
+    setFormError('');
     try {
-      dataStore.saveProduct(
+      await dataStore.saveProduct(
         {
           id: editingProduct?.id,
           name_ar: formNameAr,
@@ -208,6 +211,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
       setIsModalOpen(false);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'تعذر حفظ المنتج. حاول مرة أخرى.');
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
@@ -1051,8 +1056,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">
                   إلغاء
                 </button>
-                <button type="submit" disabled={isUploadingImages} className="btn btn-primary" style={{ padding: '10px 28px', fontWeight: 800, opacity: isUploadingImages ? 0.65 : 1 }}>
-                  <span>حفظ المنتج</span>
+                <button type="submit" disabled={isUploadingImages || isSavingProduct} className="btn btn-primary" style={{ padding: '10px 28px', fontWeight: 800, opacity: isUploadingImages || isSavingProduct ? 0.65 : 1 }}>
+                  <span>{isSavingProduct ? 'جاري الحفظ في قاعدة البيانات...' : 'حفظ المنتج'}</span>
                 </button>
               </div>
             </form>

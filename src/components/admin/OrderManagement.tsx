@@ -29,6 +29,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ currentUser })
   const [orders, setOrders] = useState<Order[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [databaseLoadError, setDatabaseLoadError] = useState('');
   
   // Selected Order for Details Modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -36,8 +37,16 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ currentUser })
   const [statusNote, setStatusNote] = useState('');
 
   useEffect(() => {
-    refresh();
-    return dataStore.subscribe(refresh);
+    const unsubscribe = dataStore.subscribe(refresh);
+    dataStore.refreshOrdersFromDatabase().then(() => {
+      setDatabaseLoadError('');
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'تعذر تحميل الطلبات من قاعدة البيانات.';
+      console.error('Failed to load orders from the database:', error);
+      setDatabaseLoadError(message);
+      refresh();
+    });
+    return unsubscribe;
   }, []);
 
   const refresh = () => {
@@ -121,6 +130,11 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ currentUser })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {databaseLoadError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {databaseLoadError}
+        </div>
+      )}
       {/* Top Filter and Search Bar */}
       <div
         style={{
