@@ -6,7 +6,7 @@ import { money, validateCheckoutInput } from './validation.js';
 
 const json = (body: unknown, status = 200, origin?: string) => new Response(JSON.stringify(body), {
   status,
-  headers: { 'Content-Type': 'application/json', ...(origin ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}) },
+  headers: { 'Content-Type': 'application/json', ...(origin ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Credentials': 'true', Vary: 'Origin' } : {}), },
 });
 
 Deno.serve(async (request) => {
@@ -14,7 +14,7 @@ Deno.serve(async (request) => {
   const requestOrigin = request.headers.get('origin') || undefined;
   const origin = configuredOrigin && requestOrigin === configuredOrigin ? configuredOrigin : undefined;
   if (requestOrigin && !origin) return json({ error: 'Origin is not allowed.' }, 403);
-  if (request.method === 'OPTIONS') return new Response(null, { headers: { ...(origin ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}), 'Access-Control-Allow-Headers': 'content-type, x-idempotency-key', 'Access-Control-Allow-Methods': 'POST, OPTIONS' } });
+  if (request.method === 'OPTIONS') return new Response(null, { headers: { ...(origin ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}), 'Access-Control-Allow-Headers': 'authorization, apikey, x-client-info, content-type, x-idempotency-key', 'Access-Control-Allow-Methods': 'POST, OPTIONS' } });
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, origin);
 
   try {
@@ -23,7 +23,7 @@ Deno.serve(async (request) => {
     const { customer, quantities } = validateCheckoutInput(payload, idempotencyKey);
     const url = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!url || !serviceRoleKey) throw new Error('Checkout service is not configured.');
+    if (!url || !serviceRoleKey) return json({ error: 'Checkout service is not configured.' }, 503, origin);
     const db = createClient(url, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
     const { data: existing, error: existingError } = await db.from('orders').select('*').eq('idempotency_key', idempotencyKey).maybeSingle();
@@ -54,6 +54,9 @@ Deno.serve(async (request) => {
     const { data: zone, error: zoneError } = await db.from('delivery_zones').select('delivery_fee,text_ar,is_active').eq('governorate', customer.governorate.trim()).maybeSingle();
     if (zoneError) throw zoneError;
     if (!zone?.is_active) return json({ error: 'Delivery is unavailable for the selected governorate.' }, 422, origin);
+    const { data: area, error: areaError } = await db.from('delivery_zone_areas').select('area_ar').eq('governorate', customer.governorate.trim()).eq('area_ar', customer.area.trim()).maybeSingle();
+    if (areaError) throw areaError;
+    if (!area) return json({ error: 'The selected area is unavailable for the selected governorate.' }, 422, origin);
 
     const totalAmount = money(items.reduce((sum, item) => sum + item.total_price, 0));
     const depositAmount = money(totalAmount * 0.5);
@@ -64,6 +67,8 @@ Deno.serve(async (request) => {
       order_number: orderNumber, idempotency_key: idempotencyKey, customer_info: { ...customer, name: customer.name.trim(), phone: customer.phone.trim() }, items,
       total_amount: totalAmount, deposit_percentage: 50, deposit_amount: depositAmount, deposit_payment_method: payload.deposit_payment_method || null,
       remaining_percentage: 50, remaining_amount: remainingAmount, remaining_payment_method: payload.remaining_payment_method || null,
+      // A null source fee remains null and is accompanied by the explicit
+      // source label; it is never coerced to zero or included in merchandise total.
       delivery_fee: zone.delivery_fee === null ? null : money(zone.delivery_fee), delivery_fee_text: zone.text_ar, status: 'new', whatsapp_sent: false,
       visitor_id: typeof payload.visitor_id === 'string' ? payload.visitor_id.slice(0, 200) : null,
       device_type: ['mobile', 'tablet', 'desktop'].includes(payload.device_type) ? payload.device_type : null,

@@ -1,4 +1,4 @@
-import { Order, SiteSettings } from '../types';
+import { CartItem, CustomerInfo, DepositPaymentMethod, Order, RemainingPaymentMethod, SiteSettings } from '../types';
 import { dataStore } from './dataStore';
 import { getDeliveryFeeByGov } from '../data/egyptianGovernorates';
 
@@ -136,6 +136,43 @@ export const getWhatsAppChatUrl = (order: Order, customPhone?: string): string =
   const encodedText = encodeURIComponent(message);
 
   return `https://wa.me/${cleanPhone}?text=${encodedText}`;
+};
+
+export const getWhatsAppCheckoutDraftUrl = (
+  customer: CustomerInfo,
+  items: CartItem[],
+  depositMethod: DepositPaymentMethod,
+  remainingMethod: RemainingPaymentMethod,
+): string => {
+  const settings = dataStore.getSettings();
+  const cleanPhone = normalizeWhatsAppNumber(settings.whatsapp_number || OFFICIAL_WHATSAPP_NUMBER);
+  const productsText = items.map(({ product, quantity }, index) => {
+    const price = product.pricing_mode === 'on_request' ? 'اطلب السعر' : `${formatPrice(product.price)} ج.م`;
+    const total = product.pricing_mode === 'on_request' ? 'اطلب السعر' : `${formatPrice(product.price * quantity)} ج.م`;
+    return `🔹 ${index + 1}. ${product.name_ar}\n   - الكمية: ${quantity}\n   - السعر: ${price}\n   - الإجمالي: ${total}\n   - الكود: ${product.sku}`;
+  }).join('\n\n');
+  const totalAmount = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const message = [
+    '🛍️ *طلب من موقع بداية هوم - يحتاج تسجيل يدوي*',
+    'تعذر حفظ الطلب تلقائيًا؛ برجاء تسجيله يدويًا بعد استلام الرسالة. لم يصدر رقم طلب بعد.',
+    '',
+    '*بيانات العميل:*',
+    `الاسم: ${customer.name}`,
+    `رقم الهاتف / WhatsApp: ${customer.phone}`,
+    ...(customer.alternate_phone ? [`رقم هاتف آخر: ${customer.alternate_phone}`] : []),
+    `المحافظة: ${customer.governorate}`,
+    `المنطقة / المركز: ${customer.area}`,
+    `العنوان بالتفصيل: ${customer.address}`,
+    ...(customer.notes ? [`ملاحظات التوصيل: ${customer.notes}`] : []),
+    '',
+    '*تفاصيل الطلب (الأسعار تقديرية):*',
+    productsText,
+    `إجمالي المنتجات التقديري: ${formatPrice(totalAmount)} ج.م`,
+    `طريقة دفع المقدم: ${formatPaymentMethodName(depositMethod)}`,
+    `طريقة دفع المتبقي: ${formatPaymentMethodName(remainingMethod)}`,
+  ].join('\n');
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 };
 
 export const getDirectWhatsAppInquiryUrl = (productTitle?: string, sku?: string): string => {

@@ -18,7 +18,7 @@ import confetti from 'canvas-confetti';
 import { useCart } from '../../context/CartContext';
 import { EGYPTIAN_GOVERNORATES, getDeliveryFeeByGov } from '../../data/egyptianGovernorates';
 import { submitCheckout } from '../../services/checkout';
-import { getWhatsAppChatUrl, formatWhatsAppMessage, formatPaymentMethodName } from '../../services/whatsapp';
+import { getWhatsAppChatUrl, getWhatsAppCheckoutDraftUrl, formatWhatsAppMessage, formatPaymentMethodName } from '../../services/whatsapp';
 import { analytics } from '../../services/analytics';
 import { Order, CustomerInfo, DepositPaymentMethod, RemainingPaymentMethod } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
@@ -48,6 +48,8 @@ export const CheckoutModal: React.FC = () => {
   const idempotencyKeyRef = useRef<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [submissionDiagnostic, setSubmissionDiagnostic] = useState<string | null>(null);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -142,6 +144,9 @@ export const CheckoutModal: React.FC = () => {
     if (items.length === 0) return;
 
     setIsSubmitting(true);
+    setSubmissionError(null);
+    setSubmissionDiagnostic(null);
+    let whatsappWindow: Window | null = null;
 
     // Stage 1: Record submit intent before any persistence.
     // This fires even if createOrder() later throws.
@@ -151,6 +156,11 @@ export const CheckoutModal: React.FC = () => {
     });
 
     try {
+      // Open during the user's click gesture so browsers do not block the
+      // WhatsApp tab while the server-side order request is in flight.
+      whatsappWindow = window.open('about:blank', '_blank');
+      if (whatsappWindow) whatsappWindow.opener = null;
+
       // The Edge Function is the authority for prices, delivery, balances,
       // persistence and idempotency. WhatsApp is not opened before it returns.
       const { order } = await submitCheckout({
@@ -168,8 +178,7 @@ export const CheckoutModal: React.FC = () => {
         idempotencyKey: idempotencyKeyRef.current || (idempotencyKeyRef.current = crypto.randomUUID())
       });
 
-      // Stage 2: ORDER_CREATED — localStorage save confirmed (synchronous).
-      //          Supabase sync status cannot be confirmed here (fire-and-forget).
+      // Stage 2: ORDER_CREATED — the Edge Function returned the persisted order.
       analytics.setLocation(formData.governorate);
       analytics.track('ORDER_CREATED', {
         order_id: order.id,
@@ -196,11 +205,13 @@ export const CheckoutModal: React.FC = () => {
       } catch {}
 
       // Stage 3: Attempt to open WhatsApp.
-      //          window.open does NOT guarantee the tab opened (popup blocker, mobile OS, etc.).
+      //          A pre-opened tab can still be closed by the user or the browser.
       //          We record the attempt via WHATSAPP_CLICK; actual delivery confirmation
       //          must be verified manually or via WhatsApp Business API.
       const whatsappUrl = getWhatsAppChatUrl(order);
-      const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      if (whatsappWindow && !whatsappWindow.closed) {
+        whatsappWindow.location.href = whatsappUrl;
+      }
 
       // Stage 3 event — window_opened reflects whether the browser allowed the popup,
       // NOT whether the user sent a WhatsApp message. Message delivery cannot be confirmed
@@ -208,10 +219,20 @@ export const CheckoutModal: React.FC = () => {
       analytics.track('WHATSAPP_CLICK', {
         source: 'checkout_submission',
         order_number: order.order_number,
-        window_opened: whatsappWindow !== null,
+        window_opened: whatsappWindow !== null && !whatsappWindow.closed,
       });
     } catch (err) {
       console.error('Order submission failed:', err);
+      const diagnostic = err instanceof Error ? err.message : String(err);
+      setSubmissionDiagnostic(diagnostic);
+      const draftUrl = getWhatsAppCheckoutDraftUrl(
+        formData,
+        items,
+        depositMethod as DepositPaymentMethod,
+        remainingMethod as RemainingPaymentMethod,
+      );
+      if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = draftUrl;
+      setSubmissionError(tx(t.checkout.submitFailed));
       captureAppException(err, {
         stage: 'checkout_submission',
         items_count: items.length,
@@ -492,10 +513,10 @@ export const CheckoutModal: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* 1. Name */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
+                  <label htmlFor="name" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
                     {tx(t.checkout.name)} <span style={{ color: '#DC2626' }}>*</span>
                   </label>
-                  <input
+                  <input id="name" name="name"
                     type="text"
                     placeholder={tx(t.checkout.nameExample)}
                     value={formData.name}
@@ -518,7 +539,7 @@ export const CheckoutModal: React.FC = () => {
 
                 {/* 2. Primary Phone */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
+                  <label htmlFor="phone" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
                     {tx(t.checkout.phoneOrder)} <span style={{ color: '#DC2626' }}>*</span>
                   </label>
                   <input
@@ -546,10 +567,10 @@ export const CheckoutModal: React.FC = () => {
 
                 {/* 3. Alternate Phone (Optional) */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
+                  <label htmlFor="alternate_phone" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
                     {tx(t.checkout.alternatePhone)} <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)' }}>({lang === 'ar' ? 'اختياري' : 'optional'})</span>
                   </label>
-                  <input
+                  <input id="alternate_phone" name="alternate_phone"
                     type="tel"
                     placeholder={tx(t.checkout.alternatePhonePlaceholder)}
                     value={formData.alternate_phone || ''}
@@ -580,10 +601,12 @@ export const CheckoutModal: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {/* Governorate */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
+                    <label htmlFor="governorate" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
                       {tx(t.checkout.governorate)} <span style={{ color: '#DC2626' }}>*</span>
                     </label>
                     <select
+                      id="governorate"
+                      name="governorate"
                       value={formData.governorate}
                       onChange={(e) => {
                         const newGov = e.target.value;
@@ -635,10 +658,12 @@ export const CheckoutModal: React.FC = () => {
 
                   {/* Area / Center (Dependent Select) */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
+                    <label htmlFor="area" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
                       {tx(t.checkout.area)} <span style={{ color: '#DC2626' }}>*</span>
                     </label>
                     <select
+                      id="area"
+                      name="area"
                       disabled={!formData.governorate}
                       value={formData.area}
                       onChange={(e) => {
@@ -677,10 +702,10 @@ export const CheckoutModal: React.FC = () => {
 
                 {/* 5. Detailed Address */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
+                  <label htmlFor="address" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>
                     {tx(t.checkout.address)} <span style={{ color: '#DC2626' }}>*</span>
                   </label>
-                  <textarea
+                  <textarea id="address" name="address"
                     rows={2}
                     placeholder={tx(t.checkout.addressExample)}
                     value={formData.address}
@@ -704,10 +729,10 @@ export const CheckoutModal: React.FC = () => {
 
                 {/* 6. Notes */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                  <label htmlFor="notes" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
                     {tx(t.checkout.optionalDeliveryNotes)}
                   </label>
-                  <input
+                  <input id="notes" name="notes"
                     type="text"
                     placeholder={tx(t.checkout.notesExample)}
                     value={formData.notes || ''}
@@ -931,6 +956,26 @@ export const CheckoutModal: React.FC = () => {
 
               {/* Submit CTA */}
               <div style={{ marginTop: '22px' }}>
+                {submissionError && (
+                  <div role="alert" style={{ color: '#B91C1C', marginBottom: '12px', fontSize: '0.9rem' }}>
+                    <p style={{ margin: '0 0 6px' }}>{submissionError}</p>
+                    {submissionDiagnostic && (
+                      <p dir="ltr" style={{ margin: '0 0 10px', fontSize: '0.78rem', overflowWrap: 'anywhere' }}>
+                        {submissionDiagnostic}
+                      </p>
+                    )}
+                    <a
+                      href={getWhatsAppCheckoutDraftUrl(formData, items, depositMethod as DepositPaymentMethod, remainingMethod as RemainingPaymentMethod)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-whatsapp"
+                      style={{ width: '100%', textDecoration: 'none' }}
+                    >
+                      <MessageCircle size={18} />
+                      <span>{tx(t.checkout.sendDraftWhatsapp)}</span>
+                    </a>
+                  </div>
+                )}
                 <button
                   type="submit"
                   disabled={isSubmitting}
