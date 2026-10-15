@@ -1,13 +1,29 @@
 # Supabase review package
 
-Nothing in this directory has been applied to a Supabase project. The migration is a review draft for an empty application schema.
+The configured Supabase project contains the application tables, helper
+functions, expected initial-schema policies, product image bucket and storage
+policies. The analytics ingestion migration
+(`20261015000100_allow_public_analytics_event_inserts.sql`) was also manually
+applied through the Supabase Dashboard SQL Editor after approval.
+
+The project has no `supabase_migrations.schema_migrations` table. As a result,
+`supabase migration list --project-ref hkanvnbdmgzvfcwuqdjj` reports all three
+local migrations as pending remotely, even though their objects are present.
+This object-presence check does not prove exact schema parity: for example,
+the existing product image bucket has no file-size limit, while the storage
+migration's insert would set one only when creating a new bucket. Do not run
+`supabase db push` or repair migration history until the complete remote schema,
+constraints, triggers, grants, and bucket configuration have been compared
+with the local migrations and any differences have been resolved.
 
 ## What the initial migration creates
 
 - Catalog tables: `categories`, `subcategories`, `brands`, and `products`.
 - Store configuration: `site_settings` and server-side `delivery_zones`.
 - Secure operations tables: `orders`, `admin_users`, and `admin_activity_logs`.
-- Optional reporting storage: `analytics_events` (no public write policy).
+- Optional reporting storage: `analytics_events` (the initial schema adds no
+  public write policy; the separate analytics migration allows constrained
+  anonymous inserts, but not public reads or updates).
 - An atomic order-number sequence and a restricted status-update RPC.
 - RLS enabled on every application table, with public catalog reads only.
 
@@ -32,12 +48,14 @@ database if it is not already there. Uploaded product images use the public
 
 Orders are persisted only by the `submit-order` Edge Function. Opening or
 sending its WhatsApp fallback draft does not save an order; the checkout UI
-explicitly labels that path as unregistered. Analytics remains local-first, and
-the schema has no public analytics-ingestion policy.
+explicitly labels that path as unregistered. Analytics remains local-first;
+the separate analytics migration permits constrained anonymous event inserts
+without allowing public reads or updates.
 
-The migration and Edge Function sources have not been deployed or executed
-against a database from this workspace. The local function has unit tests, but
-there is no initialized local Supabase stack or integration-test harness here.
+The initial schema and Edge Function sources have not been deployed or executed
+against a database from this workspace through the Supabase CLI. The local
+function has unit tests, but there is no initialized local Supabase stack or
+integration-test harness here.
 
 ## Required review decisions before applying
 

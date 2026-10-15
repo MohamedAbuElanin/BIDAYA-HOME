@@ -54,7 +54,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onSelectCategory }) 
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(217, 112, 54, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-400)' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(213, 175, 52, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-400)' }}>
                 <ShieldCheck size={24} />
               </div>
               <div>
@@ -99,13 +99,12 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onSelectCategory }) 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
               <img
-                src="/logo.svg"
+                src="/Logo/Icon Black & White.svg"
                 alt={lang === 'ar' ? 'شعار بداية هوم' : 'Bidaya Home logo'}
                 style={{
                   width: '44px',
                   height: '44px',
                   objectFit: 'contain',
-                  filter: 'brightness(0) invert(1)',
                   flexShrink: 0
                 }}
               />

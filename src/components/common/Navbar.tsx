@@ -4,7 +4,6 @@ import {
   Search,
   Menu,
   X,
-  MessageCircle,
   Home,
   Grid,
   Tag,
@@ -20,7 +19,6 @@ import {
 import { useCart } from '../../context/CartContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { dataStore } from '../../services/dataStore';
-import { getDirectWhatsAppInquiryUrl } from '../../services/whatsapp';
 import { analytics } from '../../services/analytics';
 import { Category } from '../../types';
 import { useProductPreferences } from '../../context/ProductPreferencesContext';
@@ -77,103 +75,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
 
   return (
     <header className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 800 }}>
-      {/* Top micro-bar */}
-      <div
-        style={{
-          backgroundColor: 'var(--primary-900)',
-          color: '#E8F5EC',
-          padding: '6px 0',
-          fontSize: '0.8rem',
-          fontWeight: 500,
-          borderBottom: '1px solid rgba(255,255,255,0.08)'
-        }}
-      >
-        <div
-          className="container"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ADE80' }}></span>
-            <span>{slogan}</span>
-            <span style={{ opacity: 0.6 }}>|</span>
-            <span style={{ opacity: 0.9 }}>{tx(t.topbar.delivery)}</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <a
-              href={getDirectWhatsAppInquiryUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => analytics.track('WHATSAPP_CLICK', { source: 'topbar' })}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                color: '#4ADE80',
-                textDecoration: 'none',
-                fontWeight: 600
-              }}
-            >
-              <MessageCircle size={14} />
-              <span>{tx(t.topbar.support)}: {settings.support_phone || tx(t.topbar.whatsappDirect)}</span>
-            </a>
-
-            {/* Language Toggle */}
-            <button
-              onClick={toggleLanguage}
-              title={tx(t.general.switchToEn)}
-              style={{
-                background: 'rgba(255,255,255,0.15)',
-                border: '1px solid rgba(255,255,255,0.25)',
-                color: '#E8F5EC',
-                padding: '2px 10px',
-                borderRadius: '20px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                letterSpacing: '0',
-                transition: 'all 0.2s ease',
-                fontFamily: lang === 'ar' ? 'var(--font-latin)' : 'var(--font-arabic)'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
-            >
-              <Languages size={13} />
-              <span>{tx(t.general.switchToEn)}</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('admin')}
-              title={tx(t.topbar.admin)}
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: 'none',
-                color: '#E8F5EC',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.75rem'
-              }}
-            >
-              <ShieldCheck size={13} />
-              <span>{tx(t.topbar.admin)}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Navbar Bar */}
       <div className="container" style={{ padding: '12px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
@@ -190,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
             }}
           >
             <img
-              src="/logo.svg"
+              src="/Logo/Icon - Mark.svg"
               alt={lang === 'ar' ? 'شعار بداية هوم' : 'Bidaya Home logo'}
               style={{
                 width: '48px',
@@ -262,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
           </form>}
 
           {/* Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 1vw, 10px)' }}>
             <button
               type="button"
               onClick={() => onNavigate('wishlist')}
@@ -286,11 +187,32 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
               {compareIds.length > 0 && <span style={{ position: 'absolute', top: '-4px', insetInlineEnd: '-4px', minWidth: '17px', height: '17px', display: 'grid', placeItems: 'center', borderRadius: '50%', background: 'var(--primary-700)', color: '#fff', fontSize: '0.65rem', fontWeight: 800 }}>{compareIds.length}</span>}
             </button>
             <button
+              type="button"
+              onClick={toggleLanguage}
+              className="btn btn-outline"
+              title={tx(t.general.switchToEn)}
+              aria-label={tx(t.general.switchToEn)}
+              style={{
+                padding: '7px clamp(6px, 2vw, 10px)',
+                borderRadius: 'var(--radius-full)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                fontFamily: lang === 'ar' ? 'var(--font-latin)' : 'var(--font-arabic)'
+              }}
+            >
+              <Languages size={16} />
+              <span className="navbar-language-label">{tx(t.general.switchToEn)}</span>
+            </button>
+            <button
               onClick={openCart}
               className="btn btn-outline"
               style={{
                 position: 'relative',
-                padding: '8px 16px',
+                padding: '8px clamp(8px, 2vw, 16px)',
                 borderRadius: 'var(--radius-full)',
                 borderColor: itemsCount > 0 ? 'var(--primary-600)' : 'var(--border-default)',
                 backgroundColor: itemsCount > 0 ? 'var(--primary-50)' : 'transparent',
@@ -590,6 +512,36 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={() => onNavigate('admin')}
+            title={tx(t.topbar.admin)}
+            style={{
+              background: 'transparent',
+              color: 'var(--text-main)',
+              border: 'none',
+              padding: '7px 18px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '0.92rem',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-surface-subtle)';
+              e.currentTarget.style.color = 'var(--primary-700)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--text-main)';
+            }}
+          >
+            <ShieldCheck size={16} />
+            <span>{tx(t.topbar.admin)}</span>
+          </button>
         </nav>
       </div>
 
@@ -634,30 +586,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
               />
             </div>
           </form>
-
-          {/* Language toggle - mobile */}
-          <button
-            onClick={toggleLanguage}
-            style={{
-              width: '100%',
-              marginBottom: '12px',
-              padding: '10px',
-              borderRadius: 'var(--radius-md)',
-              border: '1.5px solid var(--primary-200)',
-              backgroundColor: 'var(--primary-50)',
-              color: 'var(--primary-700)',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-          >
-            <Languages size={18} />
-            <span>{tx(t.general.switchToEn)}</span>
-          </button>
 
           {/* Links list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

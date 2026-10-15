@@ -33,6 +33,8 @@ const STORAGE_KEYS = {
   PRODUCTS: 'bh_products_v1',
   ORDERS: 'bh_orders_v1',
   ANALYTICS: 'bh_analytics_events_v1',
+  ANALYTICS_PENDING: 'bh_analytics_events_pending_v1',
+  ANALYTICS_ID_MIGRATIONS: 'bh_analytics_event_id_migrations_v1',
   ADMIN_USERS: 'bh_admin_users_v1',
   ACTIVITY_LOGS: 'bh_activity_logs_v1',
   ORDER_COUNTER: 'bh_order_counter_v1',
@@ -41,6 +43,8 @@ const STORAGE_KEYS = {
 
 class DataStoreService {
   private listeners: Set<() => void> = new Set();
+  private analyticsSyncPromise: Promise<void> | null = null;
+  private initialized = false;
 
   private load<T>(key: string, defaultValue: T): T {
     try {
@@ -67,6 +71,26 @@ class DataStoreService {
     }
   }
 
+  private writeLocal<T>(key: string, data: T): boolean {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.warn(`Error saving ${key} to localStorage:`, e);
+      return false;
+    }
+  }
+
+  private readLocal<T>(key: string, defaultValue: T): T {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) as T : defaultValue;
+    } catch (e) {
+      console.warn(`Error loading ${key} from localStorage:`, e);
+      return defaultValue;
+    }
+  }
+
   public subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => {
@@ -87,12 +111,35 @@ class DataStoreService {
 
   // --- SETTINGS ---
   public getSettings(): SiteSettings {
-    const settings = this.load<SiteSettings>(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS);
-    
+    return this.readLocal(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS);
+  }
+
+  public initializeSettings(): void {
+    let settings: SiteSettings;
+    let hasChanges = false;
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (!stored) {
+        settings = { ...INITIAL_SETTINGS };
+        hasChanges = true;
+      } else {
+        try {
+          settings = JSON.parse(stored) as SiteSettings;
+        } catch (error) {
+          console.warn('Invalid stored settings; restoring defaults:', error);
+          settings = { ...INITIAL_SETTINGS };
+          hasChanges = true;
+        }
+      }
+    } catch (error) {
+      console.warn('Unable to initialize stored settings:', error);
+      return;
+    }
+
     // Auto-migration & sanitization:
     // If cached localStorage has the old incorrect number (containing 14878411) or is missing,
     // seamlessly migrate to the correct official number: 201509990745 / 01509990745
-    let hasChanges = false;
     if (
       !settings.whatsapp_number ||
       settings.whatsapp_number.includes('14878411') ||
@@ -115,8 +162,6 @@ class DataStoreService {
     if (hasChanges) {
       this.save(STORAGE_KEYS.SETTINGS, settings);
     }
-
-    return settings;
   }
 
   public updateSettings(newSettings: Partial<SiteSettings>, adminUser?: AdminUser): SiteSettings {
@@ -982,23 +1027,206 @@ class DataStoreService {
     const events = this.getAnalyticsEvents();
     const newEvent: AnalyticsEvent = {
       ...event,
-      id: `evt-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
+      id: this.createAnalyticsEventId(),
       timestamp: new Date().toISOString()
     };
 
+    const pendingEvents = this.getPendingAnalyticsEvents();
+    if (!pendingEvents) {
+      console.warn('Analytics event was saved locally but could not be queued for synchronization.');
+      this.saveAnalyticsEventLocally(events, newEvent);
+      return;
+    }
+
+    if (!this.writePendingAnalyticsEvents([newEvent, ...pendingEvents])) {
+      console.warn('Analytics event was saved locally but could not be queued for synchronization.');
+      this.saveAnalyticsEventLocally(events, newEvent);
+      return;
+    }
+
+    this.saveAnalyticsEventLocally(events, newEvent);
+    void this.syncPendingAnalyticsEvents();
+  }
+
+  private saveAnalyticsEventLocally(events: AnalyticsEvent[], newEvent: AnalyticsEvent): void {
     // Keep max 2000 events in localStorage for smooth performance
     events.unshift(newEvent);
     if (events.length > 2000) {
       events.pop();
     }
     this.save(STORAGE_KEYS.ANALYTICS, events);
+  }
 
-    // Sync to Supabase if connected
+  private isUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  }
+
+  private createAnalyticsEventId(): string {
+    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  private getPendingAnalyticsEvents(): AnalyticsEvent[] | null {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.ANALYTICS_PENDING);
+      if (!stored) return [];
+      const events: unknown = JSON.parse(stored);
+      if (!Array.isArray(events)) {
+        console.warn('Invalid pending analytics queue; leaving it untouched.');
+        return null;
+      }
+      return events as AnalyticsEvent[];
+    } catch (error) {
+      console.warn('Unable to read pending analytics queue; leaving it untouched:', error);
+      return null;
+    }
+  }
+
+  private writePendingAnalyticsEvents(events: AnalyticsEvent[]): boolean {
+    return this.writeLocal(STORAGE_KEYS.ANALYTICS_PENDING, events);
+  }
+
+  public initialize(): void {
+    if (this.initialized) return;
+    this.initialized = true;
+
+    this.initializeSettings();
+    this.migrateLegacyAnalyticsEventIds();
+    void this.syncPendingAnalyticsEvents();
+    window.addEventListener('online', () => {
+      void this.syncPendingAnalyticsEvents();
+    });
+  }
+
+  private migrateLegacyAnalyticsEventIds(): void {
+    const events = this.readLocal<AnalyticsEvent[] | null>(STORAGE_KEYS.ANALYTICS, null);
+    if (!events || !Array.isArray(events)) return;
+
+    const pendingEvents = this.getPendingAnalyticsEvents();
+    if (!pendingEvents) return;
+
+    let idMigrations: Record<string, string>;
+    try {
+      const storedMigrations = localStorage.getItem(STORAGE_KEYS.ANALYTICS_ID_MIGRATIONS);
+      idMigrations = storedMigrations ? JSON.parse(storedMigrations) as Record<string, string> : {};
+    } catch (error) {
+      console.warn('Unable to read analytics ID migration map; legacy events were left untouched:', error);
+      return;
+    }
+
+    const pendingIds = new Set(pendingEvents.map((event) => event.id));
+    let hasChanges = false;
+    const migratedEvents = events.map((event) => {
+      if (this.isUuid(event.id)) return event;
+      const legacyId = event.id;
+      const storedMigratedId = idMigrations[legacyId];
+      const migratedId = storedMigratedId && this.isUuid(storedMigratedId)
+        ? storedMigratedId
+        : this.createAnalyticsEventId();
+      idMigrations[legacyId] = migratedId;
+      const migratedEvent = { ...event, id: migratedId };
+      if (!pendingIds.has(migratedId)) {
+        pendingEvents.unshift(migratedEvent);
+        pendingIds.add(migratedId);
+      }
+      hasChanges = true;
+      return migratedEvent;
+    });
+
+    if (!hasChanges) return;
+    if (!this.writeLocal(STORAGE_KEYS.ANALYTICS_ID_MIGRATIONS, idMigrations)) return;
+    if (!this.writePendingAnalyticsEvents(pendingEvents)) {
+      console.warn('Legacy analytics events were preserved but could not be queued for synchronization.');
+      return;
+    }
+
+    if (!this.writeLocal(STORAGE_KEYS.ANALYTICS, migratedEvents)) {
+      console.warn('Legacy analytics events were queued but their local IDs could not be updated.');
+      return;
+    }
+
+    try {
+      localStorage.removeItem(STORAGE_KEYS.ANALYTICS_ID_MIGRATIONS);
+    } catch (error) {
+      console.warn('Unable to clear analytics ID migration map:', error);
+    }
+  }
+
+  public syncPendingAnalyticsEvents(): Promise<void> {
+    if (this.analyticsSyncPromise) return this.analyticsSyncPromise;
+
+    this.analyticsSyncPromise = this.syncAnalyticsQueue().finally(() => {
+      this.analyticsSyncPromise = null;
+    });
+    return this.analyticsSyncPromise;
+  }
+
+  private async syncAnalyticsQueue(): Promise<void> {
     const supabase = getSupabaseClient();
-    if (supabase) {
-      supabase.from('analytics_events').insert([newEvent]).then(({ error }) => {
-        if (error) console.warn('Analytics sync notice:', error.message);
-      });
+    if (!supabase) return;
+
+    while (true) {
+      const pendingEvents = this.getPendingAnalyticsEvents();
+      if (!pendingEvents || pendingEvents.length === 0) return;
+
+      const batch = pendingEvents.slice(0, 100);
+      const rows = batch.map((event) => ({
+        id: event.id,
+        event_name: event.event_name,
+        visitor_id: event.visitor_id,
+        session_id: event.session_id,
+        timestamp: event.timestamp,
+        page_url: event.page_url,
+        device_type: event.device_type,
+        traffic_source: event.traffic_source,
+        location_governorate: event.location_governorate,
+        metadata: event.metadata || {}
+      }));
+
+      const acknowledgedIds = new Set<string>();
+      try {
+        const { error } = await supabase
+          .from('analytics_events')
+          .insert(rows);
+
+        if (error?.code === '23505') {
+          for (const row of rows) {
+            const { error: rowError } = await supabase
+              .from('analytics_events')
+              .insert(row);
+
+            if (rowError && rowError.code !== '23505') {
+              console.warn('Analytics sync failed; pending events retained for retry:', rowError.message);
+              break;
+            }
+            acknowledgedIds.add(row.id);
+          }
+        } else if (error) {
+          console.warn('Analytics sync failed; pending events retained for retry:', error.message);
+          return;
+        } else {
+          batch.forEach((event) => acknowledgedIds.add(event.id));
+        }
+      } catch (syncError) {
+        console.warn('Analytics sync failed; pending events retained for retry:', syncError);
+        return;
+      }
+
+      if (acknowledgedIds.size === 0) return;
+
+      const currentPendingEvents = this.getPendingAnalyticsEvents();
+      if (!currentPendingEvents) return;
+      const remainingEvents = currentPendingEvents.filter((event) => !acknowledgedIds.has(event.id));
+      if (!this.writePendingAnalyticsEvents(remainingEvents)) {
+        console.warn('Analytics events synchronized but remain queued because the queue could not be updated.');
+        return;
+      }
+      if (acknowledgedIds.size < batch.length) return;
     }
   }
 
