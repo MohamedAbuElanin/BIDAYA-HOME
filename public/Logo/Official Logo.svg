@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 386.17 316.2">
+  <defs>
+    <style>
+      .cls-1 {
+        font-family: Tajawal-Medium, Tajawal;
+        font-size: 22px;
+        font-weight: 500;
+      }
+
+      .cls-1, .cls-2, .cls-3 {
+        fill: #22428d;
+      }
+
+      .cls-3, .cls-4 {
+        stroke-width: 0px;
+      }
+
+      .cls-5, .cls-4 {
+        fill: #d5af34;
+      }
+
+      .cls-6 {
+        font-family: Montserrat-Bold, Montserrat;
+        font-size: 62.13px;
+        font-variation-settings: 'wght' 700;
+        font-weight: 700;
+      }
+
+      .cls-7 {
+        fill: #231f20;
+      }
+    </style>
+  </defs>
+  <g id="Layer_1-2" data-name="Layer 1">
+    <g>
+      <polygon class="cls-4" points="280.65 83.19 280.65 57.53 187.37 0 187.37 23.83 280.65 83.19"/>
+      <path class="cls-3" d="M152.13,89.19v-17.87c12.09-9.53,24.17-19.06,36.26-28.6,19.4,11.91,38.81,23.83,58.21,35.74,2.2.98,7.92,3.9,11.23,10.38,1.33,2.59,1.91,5.04,2.17,6.92.2,2.19.24,5.23-.46,8.74-.86,4.31-2.49,7.6-3.74,9.7,1.51.91,14.79,9.19,14.48,21.6-.04,1.67-.34,3.69-1.2,5.97-.33,3.14-1.31,7.37-4.09,11.4-8.93,12.97-27.65,11.17-28.6,11.06h-116.94c-.06-40.11-.11-80.23-.17-120.34,22.7-14.38,45.39-28.77,68.09-43.15.74.2,5.84,1.65,8.21,6.77,1.93,4.16,1.33,9.15-1.53,12.96-18.06,12.01-36.11,24.01-54.17,36.02l.51,87.32c32.67.26,65.34.52,98.01.78.76-.11,7.21-1.11,8.83-5.23,1.77-4.5-2.34-12.27-11.87-15.46,0-9.17.01-18.34.02-27.51-16.28-9.88-32.57-19.77-48.85-29.65-11.47,7.48-22.94,14.96-34.4,22.44Z"/>
+      <polygon class="cls-4" points="258.52 37.79 239.45 26.55 239.45 6.13 258.52 6.13 258.52 37.79"/>
+      <g>
+        <rect class="cls-4" x="174.11" y="98.01" width="11.57" height="11.57"/>
+        <rect class="cls-4" x="193.09" y="98.01" width="11.57" height="11.57"/>
+        <rect class="cls-4" x="174.11" y="116.06" width="11.57" height="11.57"/>
+        <rect class="cls-4" x="193.09" y="116.06" width="11.57" height="11.57"/>
+      </g>
+    </g>
+    <text class="cls-6" transform="translate(0 236.07) scale(.82 1)"><tspan class="cls-2" x="0" y="0">BIDAYA</tspan><tspan class="cls-7" x="249.2" y="0"> </tspan><tspan class="cls-5" x="266.78" y="0">HOME</tspan></text>
+    <text class="cls-1" transform="translate(101.02 278.27)"><tspan x="0" y="0">A New Beginning...</tspan></text>
+    <text class="cls-1" transform="translate(44.39 307.95)"><tspan x="0" y="0">Your Home Deserves the Best</tspan></text>
+  </g>
+</svg>

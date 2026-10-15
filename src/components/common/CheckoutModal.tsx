@@ -231,7 +231,7 @@ export const CheckoutModal: React.FC = () => {
         depositMethod as DepositPaymentMethod,
         remainingMethod as RemainingPaymentMethod,
       );
-      if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.location.href = draftUrl;
+      if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.close();
       setSubmissionError(tx(t.checkout.submitFailed));
       captureAppException(err, {
         stage: 'checkout_submission',
