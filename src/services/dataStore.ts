@@ -21,7 +21,10 @@ import {
   INITIAL_BRANDS,
   INITIAL_PRODUCTS,
   INITIAL_ORDERS,
-  INITIAL_ADMIN_USERS
+  INITIAL_ADMIN_USERS,
+  LEGACY_DEMO_PRODUCT_IDS,
+  LEGACY_DEMO_ORDER_IDS,
+  LEGACY_DEMO_ADMIN_USER_IDS
 } from '../data/seedData';
 import { captureAppException } from '../lib/posthog';
 import { getSupabaseClient } from '../lib/supabase';
@@ -38,7 +41,8 @@ const STORAGE_KEYS = {
   ADMIN_USERS: 'bh_admin_users_v1',
   ACTIVITY_LOGS: 'bh_activity_logs_v1',
   ORDER_COUNTER: 'bh_order_counter_v1',
-  TAXONOMY_VERSION: 'bh_taxonomy_v2'
+  TAXONOMY_VERSION: 'bh_taxonomy_v2',
+  DEMO_DATA_CLEANUP_VERSION: 'bh_demo_data_cleanup_v1'
 };
 
 class DataStoreService {
@@ -159,8 +163,40 @@ class DataStoreService {
       hasChanges = true;
     }
 
+    if (!settings.support_email || settings.support_email === 'info@bidayahome.com') {
+      settings.support_email = INITIAL_SETTINGS.support_email;
+      hasChanges = true;
+    }
+
     if (hasChanges) {
       this.save(STORAGE_KEYS.SETTINGS, settings);
+    }
+  }
+
+  private removeLegacyDemoData(): void {
+    try {
+      if (localStorage.getItem(STORAGE_KEYS.DEMO_DATA_CLEANUP_VERSION) === 'v1') return;
+
+      const removeRecordsById = (key: string, ids: Set<string>) => {
+        const stored = localStorage.getItem(key);
+        if (!stored) return;
+
+        const records = JSON.parse(stored) as Array<{ id?: string }>;
+        if (!Array.isArray(records)) throw new Error(`Expected an array in ${key}.`);
+
+        const filtered = records.filter((record) => !record?.id || !ids.has(record.id));
+        if (filtered.length !== records.length && !this.writeLocal(key, filtered)) {
+          throw new Error(`Unable to save cleaned data in ${key}.`);
+        }
+      };
+
+      removeRecordsById(STORAGE_KEYS.PRODUCTS, new Set(LEGACY_DEMO_PRODUCT_IDS));
+      removeRecordsById(STORAGE_KEYS.ORDERS, new Set(LEGACY_DEMO_ORDER_IDS));
+      removeRecordsById(STORAGE_KEYS.ADMIN_USERS, new Set(LEGACY_DEMO_ADMIN_USER_IDS));
+      removeRecordsById(STORAGE_KEYS.ACTIVITY_LOGS, new Set(['log-1']));
+      localStorage.setItem(STORAGE_KEYS.DEMO_DATA_CLEANUP_VERSION, 'v1');
+    } catch (error) {
+      console.warn('Unable to remove legacy demo data; existing data was retained where cleanup failed:', error);
     }
   }
 
@@ -226,9 +262,11 @@ class DataStoreService {
       // Check and safely migrate existing products
       if (storedProducts) {
         const parsedProducts: Product[] = JSON.parse(storedProducts);
-        let productsModified = false;
+        const legacyDemoProductIds = new Set(LEGACY_DEMO_PRODUCT_IDS);
+        const nonDemoProducts = parsedProducts.filter((product) => !legacyDemoProductIds.has(product.id));
+        let productsModified = nonDemoProducts.length !== parsedProducts.length;
 
-        const migratedProducts = parsedProducts.map(p => {
+        const migratedProducts = nonDemoProducts.map(p => {
           let updated = { ...p };
 
           // Map old categories & subcategories
@@ -271,15 +309,6 @@ class DataStoreService {
           }
 
           return updated;
-        });
-
-        // Ensure newly introduced seed products exist if not already present
-        const currentIds = new Set(migratedProducts.map(p => p.id));
-        INITIAL_PRODUCTS.forEach(ip => {
-          if (!currentIds.has(ip.id)) {
-            migratedProducts.push(ip);
-            productsModified = true;
-          }
         });
 
         if (productsModified) {
@@ -825,7 +854,7 @@ class DataStoreService {
     if (error) throw new Error(`تعذر تحميل الطلبات من قاعدة البيانات: ${error.message}`);
 
     const storedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    const demoOrderIds = new Set(INITIAL_ORDERS.map((order) => order.id));
+    const demoOrderIds = new Set(LEGACY_DEMO_ORDER_IDS);
     const localOrders = storedOrders
       ? (JSON.parse(storedOrders) as Order[]).filter((order) => !demoOrderIds.has(order.id))
       : [];
@@ -1095,6 +1124,7 @@ class DataStoreService {
     if (this.initialized) return;
     this.initialized = true;
 
+    this.removeLegacyDemoData();
     this.initializeSettings();
     this.migrateLegacyAnalyticsEventIds();
     void this.syncPendingAnalyticsEvents();
@@ -1264,18 +1294,7 @@ class DataStoreService {
 
   // --- ACTIVITY LOGS ---
   public getActivityLogs(): ActivityLog[] {
-    return this.load<ActivityLog[]>(STORAGE_KEYS.ACTIVITY_LOGS, [
-      {
-        id: 'log-1',
-        admin_id: 'usr-super',
-        admin_name: 'المدير العام (Super Admin)',
-        admin_role: 'super_admin',
-        action: 'تسجيل دخول للنظام',
-        target_type: 'auth',
-        details: 'تم الدخول بنجاح إلى لوحة الإدارة',
-        timestamp: new Date(Date.now() - 3600000).toISOString()
-      }
-    ]);
+    return this.load<ActivityLog[]>(STORAGE_KEYS.ACTIVITY_LOGS, []);
   }
 
   public logActivity(

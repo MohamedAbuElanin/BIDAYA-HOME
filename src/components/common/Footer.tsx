@@ -310,7 +310,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onSelectCategory }) 
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Mail size={18} color="var(--primary-400)" style={{ flexShrink: 0 }} />
-                <span>{settings.support_email || 'info@bidayahome.com'}</span>
+                <span>{settings.support_email || 'bidayahome@gmail.com'}</span>
               </div>
             </div>
           </div>
@@ -332,7 +332,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onSelectCategory }) 
           }}
         >
           <div>
-            {lang === 'en' ? `© 2026 Bidaya Home. ${tx(t.footer.rights)}.` : (settings.footer_text || 'جميع الحقوق محفوظة © 2026 بداية هوم - Bidaya Home')}
+            {lang === 'en'
+              ? `© 2026 ${settings.store_name_en || 'Bidaya Home'}. ${tx(t.footer.rights)}.`
+              : `جميع الحقوق محفوظة © 2026 ${settings.store_name_ar || 'بداية هوم'}`}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>{tx(t.footer.madeWithCare)}</span>

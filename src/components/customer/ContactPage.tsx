@@ -138,7 +138,7 @@ export const ContactPage: React.FC = () => {
                 <Mail size={20} color="var(--primary-700)" />
                 <div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{tx(t.contact.email)}:</div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{settings.support_email || 'info@bidayahome.com'}</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{settings.support_email || 'bidayahome@gmail.com'}</div>
                 </div>
               </div>
 
