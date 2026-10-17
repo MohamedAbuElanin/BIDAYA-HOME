@@ -5,11 +5,7 @@ import {
   MessageCircle,
   Phone,
   Globe,
-  Database,
-  RotateCcw,
-  CheckCircle2,
-  AlertTriangle,
-  Sparkles
+  CheckCircle2
 } from 'lucide-react';
 import { SiteSettings, AdminUser } from '../../types';
 import { dataStore } from '../../services/dataStore';
@@ -21,6 +17,8 @@ interface SettingsManagementProps {
 export const SettingsManagement: React.FC<SettingsManagementProps> = ({ currentUser }) => {
   const [settings, setSettings] = useState<SiteSettings>(dataStore.getSettings());
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setSettings(dataStore.getSettings());
@@ -29,17 +27,20 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({ currentU
     });
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    dataStore.updateSettings(settings, currentUser);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
-  };
-
-  const handleResetData = () => {
-    if (window.confirm('تحذير: هل أنت متأكد من إعادة ضبط بيانات المتجر بالكامل إلى البيانات الافتراضية الأولية؟')) {
-      dataStore.resetToInitialData();
-      alert('تمت إعادة ضبط البيانات بنجاح.');
+    setIsSaving(true);
+    setSavedSuccess(false);
+    setSaveError('');
+    try {
+      const savedSettings = await dataStore.updateSettings(settings, currentUser);
+      setSettings(savedSettings);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'تعذر حفظ إعدادات المتجر.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -49,6 +50,11 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({ currentU
         <div style={{ padding: '14px 18px', backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px', color: '#047857', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
           <CheckCircle2 size={20} />
           <span>تم حفظ كافة التعديلات وتحديث إعدادات المتجر بنجاح!</span>
+        </div>
+      )}
+      {saveError && (
+        <div role="alert" style={{ padding: '14px 18px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', color: '#991B1B', fontWeight: 700 }}>
+          {saveError}
         </div>
       )}
 
@@ -278,24 +284,15 @@ export const SettingsManagement: React.FC<SettingsManagementProps> = ({ currentU
         </div>
 
         {/* Submit Actions */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={handleResetData}
-            className="btn btn-outline"
-            style={{ color: '#DC2626', borderColor: '#FECACA' }}
-          >
-            <RotateCcw size={16} />
-            <span>إعادة ضبط البيانات الافتراضية</span>
-          </button>
-
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button
             type="submit"
+            disabled={isSaving}
             className="btn btn-primary btn-lg"
             style={{ padding: '12px 36px', fontWeight: 800, borderRadius: 'var(--radius-md)' }}
           >
             <Save size={18} />
-            <span>حفظ كافة الإعدادات</span>
+            <span>{isSaving ? 'جارٍ الحفظ...' : 'حفظ كافة الإعدادات'}</span>
           </button>
         </div>
       </form>

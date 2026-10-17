@@ -169,10 +169,7 @@ class AnalyticsTracker {
         };
 
       case 'ORDER_CREATED':
-        // Fires after dataStore.createOrder() returns successfully.
-        // Meaning: order is CONFIRMED saved to localStorage (always synchronous).
-        // Supabase sync is fire-and-forget; success/failure is NOT guaranteed here.
-        // 'supabase_sync' is always 'pending' — we cannot confirm without awaiting.
+        // The checkout event is emitted only after the Edge Function returns its persisted order.
         return {
           ...base,
           order_id: metadata.order_id,
@@ -184,9 +181,8 @@ class AnalyticsTracker {
           delivery_fee: metadata.delivery_fee,
           deposit_amount: metadata.deposit_amount,
           remaining_amount: metadata.remaining_amount,
-          // Reflect actual persistence scope honestly:
-          saved_to: 'localStorage',
-          supabase_sync: 'pending',
+          saved_to: 'supabase',
+          supabase_sync: 'confirmed',
         };
 
       case 'WHATSAPP_CLICK':

@@ -10,10 +10,7 @@ import {
   ActivityLog,
   AdminUser,
   OrderStatus,
-  CustomerInfo,
-  OrderItem,
-  DepositPaymentMethod,
-  RemainingPaymentMethod
+  CustomerInfo
 } from '../types';
 import {
   INITIAL_SETTINGS,
@@ -26,6 +23,7 @@ import {
   LEGACY_DEMO_ORDER_IDS,
   LEGACY_DEMO_ADMIN_USER_IDS
 } from '../data/seedData';
+import { EGYPTIAN_GOVERNORATES, Governorate, getDeliveryFeeByGov } from '../data/egyptianGovernorates';
 import { captureAppException } from '../lib/posthog';
 import { getSupabaseClient } from '../lib/supabase';
 
@@ -35,12 +33,16 @@ const STORAGE_KEYS = {
   BRANDS: 'bh_brands_v1',
   PRODUCTS: 'bh_products_v1',
   ORDERS: 'bh_orders_v1',
+  ORDERS_DATABASE: 'bh_orders_database_v1',
   ANALYTICS: 'bh_analytics_events_v1',
+  ANALYTICS_DATABASE: 'bh_analytics_events_database_v1',
   ANALYTICS_PENDING: 'bh_analytics_events_pending_v1',
   ANALYTICS_ID_MIGRATIONS: 'bh_analytics_event_id_migrations_v1',
+  DELIVERY_ZONES: 'bh_delivery_zones_v1',
   ADMIN_USERS: 'bh_admin_users_v1',
+  ADMIN_USERS_DATABASE: 'bh_admin_users_database_v1',
   ACTIVITY_LOGS: 'bh_activity_logs_v1',
-  ORDER_COUNTER: 'bh_order_counter_v1',
+  ACTIVITY_LOGS_DATABASE: 'bh_activity_logs_database_v1',
   TAXONOMY_VERSION: 'bh_taxonomy_v2',
   DEMO_DATA_CLEANUP_VERSION: 'bh_demo_data_cleanup_v1'
 };
@@ -49,6 +51,8 @@ class DataStoreService {
   private listeners: Set<() => void> = new Set();
   private analyticsSyncPromise: Promise<void> | null = null;
   private initialized = false;
+  private settingsRecordId: string | null = null;
+  private deliveryZones: Governorate[] = EGYPTIAN_GOVERNORATES;
 
   private load<T>(key: string, defaultValue: T): T {
     try {
@@ -113,9 +117,46 @@ class DataStoreService {
     });
   }
 
+  private requireSupabase(action: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error(`اتصال قاعدة البيانات غير متاح. تعذر ${action}.`);
+    return supabase;
+  }
+
   // --- SETTINGS ---
   public getSettings(): SiteSettings {
     return this.readLocal(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS);
+  }
+
+  public async refreshStorefrontData(): Promise<void> {
+    await Promise.all([
+      this.refreshSettingsFromDatabase(),
+      this.refreshCategoriesFromDatabase(),
+      this.refreshBrandsFromDatabase(),
+      this.refreshProductsFromDatabase(),
+      this.refreshDeliveryZonesFromDatabase()
+    ]);
+  }
+
+  public async refreshSettingsFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const { data, error } = await supabase.from('site_settings').select('*').order('created_at').limit(2);
+    if (error) throw new Error(`تعذر تحميل إعدادات المتجر من قاعدة البيانات: ${error.message}`);
+    if (!data?.length) return;
+    if (data.length > 1) throw new Error('يوجد أكثر من سجل لإعدادات المتجر في قاعدة البيانات.');
+
+    const { id, created_at: _createdAt, updated_at: _updatedAt, ...rowSettings } = data[0];
+    this.settingsRecordId = id;
+    const settings = { ...INITIAL_SETTINGS } as SiteSettings;
+    for (const key of Object.keys(INITIAL_SETTINGS) as Array<keyof SiteSettings>) {
+      const value = rowSettings[key];
+      if (value !== null && value !== undefined) Object.assign(settings, { [key]: value });
+    }
+    if (!this.save(STORAGE_KEYS.SETTINGS, settings)) {
+      throw new Error('تعذر تحديث ذاكرة إعدادات المتجر بعد تحميلها.');
+    }
   }
 
   public initializeSettings(): void {
@@ -200,7 +241,7 @@ class DataStoreService {
     }
   }
 
-  public updateSettings(newSettings: Partial<SiteSettings>, adminUser?: AdminUser): SiteSettings {
+  public async updateSettings(newSettings: Partial<SiteSettings>, _adminUser?: AdminUser): Promise<SiteSettings> {
     const current = this.getSettings();
     const sanitized = { ...newSettings };
 
@@ -216,12 +257,37 @@ class DataStoreService {
     }
 
     const updated = { ...current, ...sanitized };
-    this.save(STORAGE_KEYS.SETTINGS, updated);
+    const supabase = this.requireSupabase('حفظ إعدادات المتجر');
+    const settingsRow = {
+      store_name_ar: updated.store_name_ar,
+      store_name_en: updated.store_name_en,
+      slogan_ar: updated.slogan_ar,
+      logo_url: updated.logo_url || null,
+      favicon_url: updated.favicon_url || null,
+      whatsapp_number: updated.whatsapp_number,
+      support_phone: updated.support_phone || null,
+      support_email: updated.support_email || null,
+      facebook_url: updated.facebook_url || null,
+      instagram_url: updated.instagram_url || null,
+      store_address: updated.store_address || null,
+      whatsapp_template: updated.whatsapp_template,
+      show_prices: updated.show_prices,
+      enable_ordering: updated.enable_ordering,
+      enable_offers: updated.enable_offers,
+      seo_title: updated.seo_title || null,
+      seo_description: updated.seo_description || null,
+      footer_text: updated.footer_text || null
+    };
+    const query = this.settingsRecordId
+      ? supabase.from('site_settings').update(settingsRow).eq('id', this.settingsRecordId)
+      : supabase.from('site_settings').insert(settingsRow);
+    const { data, error } = await query.select('id').single();
+    if (error) throw new Error(`تعذر حفظ إعدادات المتجر في قاعدة البيانات: ${error.message}`);
 
-    if (adminUser) {
-      this.logActivity(adminUser, 'تعديل إعدادات المتجر', 'setting', 'settings', 'إعدادات الموقع', 'تم حفظ التعديلات العامة وتحديث بيانات التواصل');
+    this.settingsRecordId = data.id;
+    if (!this.save(STORAGE_KEYS.SETTINGS, updated)) {
+      throw new Error('تم حفظ الإعدادات في قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
     }
-
     return updated;
   }
 
@@ -339,7 +405,27 @@ class DataStoreService {
     return this.getCategories(true).find(c => c.slug === slug);
   }
 
-  public saveCategory(category: Partial<Category> & { name_ar: string; slug: string }, adminUser?: AdminUser): Category {
+  public async refreshCategoriesFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const [{ data: categories, error: categoryError }, { data: subcategories, error: subcategoryError }] = await Promise.all([
+      supabase.from('categories').select('*').order('display_order'),
+      supabase.from('subcategories').select('*').order('display_order')
+    ]);
+    if (categoryError) throw new Error(`تعذر تحميل الأقسام من قاعدة البيانات: ${categoryError.message}`);
+    if (subcategoryError) throw new Error(`تعذر تحميل التصنيفات الفرعية من قاعدة البيانات: ${subcategoryError.message}`);
+
+    const mapped = (categories || []).map((category) => ({
+      ...category,
+      subcategories: (subcategories || []).filter((subcategory) => subcategory.category_id === category.id)
+    })) as Category[];
+    if (!this.save(STORAGE_KEYS.CATEGORIES, mapped)) {
+      throw new Error('تعذر تخزين الأقسام المحمّلة محليًا.');
+    }
+  }
+
+  public async saveCategory(category: Partial<Category> & { name_ar: string; slug: string }, _adminUser?: AdminUser): Promise<Category> {
     const list = this.getCategories(true);
     let updatedCategory: Category;
 
@@ -347,10 +433,6 @@ class DataStoreService {
       const index = list.findIndex(c => c.id === category.id);
       if (index !== -1) {
         updatedCategory = { ...list[index], ...category } as Category;
-        list[index] = updatedCategory;
-        if (adminUser) {
-          this.logActivity(adminUser, 'تعديل قسم', 'category', updatedCategory.id, updatedCategory.name_ar, `تم تعديل بيانات قسم ${updatedCategory.name_ar}`);
-        }
       } else {
         throw new Error('Category not found');
       }
@@ -369,79 +451,122 @@ class DataStoreService {
         created_at: new Date().toISOString(),
         is_archived: false
       };
-      list.push(updatedCategory);
-      if (adminUser) {
-        this.logActivity(adminUser, 'إضافة قسم جديد', 'category', updatedCategory.id, updatedCategory.name_ar, `تم إنشاء قسم جديد: ${updatedCategory.name_ar}`);
-      }
     }
 
-    this.save(STORAGE_KEYS.CATEGORIES, list);
+    const supabase = this.requireSupabase('حفظ القسم');
+    const { error: categoryError } = await supabase.from('categories').upsert({
+      id: updatedCategory.id,
+      name_ar: updatedCategory.name_ar,
+      name_en: updatedCategory.name_en || null,
+      slug: updatedCategory.slug,
+      icon: updatedCategory.icon || null,
+      image_url: updatedCategory.image_url,
+      description: updatedCategory.description || null,
+      display_order: updatedCategory.display_order,
+      is_active: updatedCategory.is_active,
+      is_archived: updatedCategory.is_archived || false
+    }, { onConflict: 'id' });
+    if (categoryError) throw new Error(`تعذر حفظ القسم في قاعدة البيانات: ${categoryError.message}`);
+
+    const subcategoryRows = (updatedCategory.subcategories || []).map((subcategory, index) => ({
+      id: subcategory.id,
+      category_id: updatedCategory.id,
+      name_ar: subcategory.name_ar,
+      name_en: subcategory.name_en || null,
+      slug: subcategory.slug || `subcategory-${index + 1}`,
+      product_types: subcategory.product_types || [],
+      display_order: subcategory.display_order || index + 1,
+      is_archived: subcategory.is_archived || false
+    }));
+
+    if (subcategoryRows.length > 0) {
+      const { error } = await supabase.from('subcategories').upsert(subcategoryRows, { onConflict: 'id' });
+      if (error) throw new Error(`تم حفظ القسم لكن تعذر حفظ تصنيفاته الفرعية: ${error.message}`);
+    }
+
+    const { data: existingSubcategories, error: readError } = await supabase
+      .from('subcategories')
+      .select('id')
+      .eq('category_id', updatedCategory.id);
+    if (readError) throw new Error(`تعذر التحقق من التصنيفات الفرعية الحالية: ${readError.message}`);
+    const submittedIds = new Set(subcategoryRows.map((subcategory) => subcategory.id));
+    const removedIds = (existingSubcategories || [])
+      .map((subcategory) => subcategory.id)
+      .filter((id) => !submittedIds.has(id));
+    if (removedIds.length > 0) {
+      const { error } = await supabase.from('subcategories').update({ is_archived: true }).in('id', removedIds);
+      if (error) throw new Error(`تم حفظ القسم لكن تعذر أرشفة التصنيفات التي أزيلت: ${error.message}`);
+    }
+
+    const currentIndex = list.findIndex((item) => item.id === updatedCategory.id);
+    if (currentIndex === -1) list.push(updatedCategory);
+    else list[currentIndex] = updatedCategory;
+    if (!this.save(STORAGE_KEYS.CATEGORIES, list)) {
+      throw new Error('تم حفظ القسم في قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
+    }
     return updatedCategory;
   }
 
-  public archiveCategory(id: string, adminUser?: AdminUser): void {
+  public async archiveCategory(id: string, _adminUser?: AdminUser): Promise<void> {
     const list = this.getCategories(true);
     const cat = list.find(c => c.id === id);
-    if (cat) {
-      cat.is_archived = true;
-      this.save(STORAGE_KEYS.CATEGORIES, list);
-      if (adminUser) {
-        this.logActivity(adminUser, 'أرشفة قسم', 'category', cat.id, cat.name_ar, `تم أرشفة قسم: ${cat.name_ar}`);
-      }
+    if (!cat) throw new Error('القسم المطلوب غير موجود.');
+    await this.setCategoryArchived(id, true, list, cat);
+  }
+
+  public async restoreCategory(id: string, _adminUser?: AdminUser): Promise<void> {
+    const list = this.getCategories(true);
+    const cat = list.find(c => c.id === id);
+    if (!cat) throw new Error('القسم المطلوب غير موجود.');
+    await this.setCategoryArchived(id, false, list, cat);
+  }
+
+  private async setCategoryArchived(id: string, isArchived: boolean, list: Category[], category: Category): Promise<void> {
+    const supabase = this.requireSupabase('تحديث حالة القسم');
+    const { error } = await supabase.from('categories').update({ is_archived: isArchived }).eq('id', id);
+    if (error) throw new Error(`تعذر تحديث حالة القسم في قاعدة البيانات: ${error.message}`);
+    category.is_archived = isArchived;
+    if (!this.save(STORAGE_KEYS.CATEGORIES, list)) {
+      throw new Error('تم تحديث القسم في قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
     }
   }
 
-  public restoreCategory(id: string, adminUser?: AdminUser): void {
+  public async deleteCategory(id: string, _adminUser?: AdminUser): Promise<void> {
     const list = this.getCategories(true);
-    const cat = list.find(c => c.id === id);
-    if (cat) {
-      cat.is_archived = false;
-      this.save(STORAGE_KEYS.CATEGORIES, list);
-      if (adminUser) {
-        this.logActivity(adminUser, 'استعادة قسم', 'category', cat.id, cat.name_ar, `تمت استعادة قسم: ${cat.name_ar}`);
-      }
-    }
-  }
-
-  public deleteCategory(id: string, adminUser?: AdminUser): void {
-    let list = this.getCategories(true);
     const target = list.find(c => c.id === id);
-    list = list.filter(c => c.id !== id);
-    this.save(STORAGE_KEYS.CATEGORIES, list);
-    if (adminUser && target) {
-      this.logActivity(adminUser, 'حذف نهائي لقسم', 'category', target.id, target.name_ar, `تم حذف قسم: ${target.name_ar}`);
+    if (!target) return;
+    const supabase = this.requireSupabase('حذف القسم');
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error) throw new Error(`تعذر حذف القسم من قاعدة البيانات: ${error.message}`);
+    const remaining = list.filter((category) => category.id !== id);
+    if (!this.save(STORAGE_KEYS.CATEGORIES, remaining)) {
+      throw new Error('تم حذف القسم من قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
     }
   }
 
   // --- SUBCATEGORIES CRUD ---
-  public saveSubcategory(
+  public async saveSubcategory(
     categoryId: string,
     subcategory: Partial<Subcategory> & { name_ar: string },
-    adminUser?: AdminUser
-  ): Subcategory {
+    _adminUser?: AdminUser
+  ): Promise<Subcategory> {
     const list = this.getCategories(true);
     const cat = list.find(c => c.id === categoryId);
     if (!cat) throw new Error('Parent category not found');
 
-    if (!cat.subcategories) {
-      cat.subcategories = [];
-    }
+    const subcategories = cat.subcategories || [];
 
     let updatedSub: Subcategory;
     const baseSlug = subcategory.slug || subcategory.name_ar.toLowerCase().replace(/\s+/g, '-');
 
     if (subcategory.id) {
-      const idx = cat.subcategories.findIndex(s => s.id === subcategory.id);
+      const idx = subcategories.findIndex(s => s.id === subcategory.id);
       if (idx !== -1) {
         updatedSub = {
-          ...cat.subcategories[idx],
+          ...subcategories[idx],
           ...subcategory,
           category_id: categoryId
         };
-        cat.subcategories[idx] = updatedSub;
-        if (adminUser) {
-          this.logActivity(adminUser, 'تعديل تصنيف فرعي', 'category', updatedSub.id, updatedSub.name_ar, `تم تعديل فرع ${updatedSub.name_ar} في ${cat.name_ar}`);
-        }
       } else {
         throw new Error('Subcategory not found');
       }
@@ -453,60 +578,71 @@ class DataStoreService {
         name_en: subcategory.name_en || '',
         slug: baseSlug,
         product_types: subcategory.product_types || [],
-        display_order: subcategory.display_order || cat.subcategories.length + 1,
+        display_order: subcategory.display_order || subcategories.length + 1,
         is_archived: false
       };
-      cat.subcategories.push(updatedSub);
-      if (adminUser) {
-        this.logActivity(adminUser, 'إضافة تصنيف فرعي', 'category', updatedSub.id, updatedSub.name_ar, `تمت إضافة فرع ${updatedSub.name_ar} إلى ${cat.name_ar}`);
-      }
     }
 
-    this.save(STORAGE_KEYS.CATEGORIES, list);
+    const supabase = this.requireSupabase('حفظ التصنيف الفرعي');
+    const { error } = await supabase.from('subcategories').upsert({
+      id: updatedSub.id,
+      category_id: categoryId,
+      name_ar: updatedSub.name_ar,
+      name_en: updatedSub.name_en || null,
+      slug: updatedSub.slug,
+      product_types: updatedSub.product_types || [],
+      display_order: updatedSub.display_order || 0,
+      is_archived: updatedSub.is_archived || false
+    }, { onConflict: 'id' });
+    if (error) throw new Error(`تعذر حفظ التصنيف الفرعي في قاعدة البيانات: ${error.message}`);
+
+    cat.subcategories = subcategories.some((item) => item.id === updatedSub.id)
+      ? subcategories.map((item) => item.id === updatedSub.id ? updatedSub : item)
+      : [...subcategories, updatedSub];
+    if (!this.save(STORAGE_KEYS.CATEGORIES, list)) {
+      throw new Error('تم حفظ التصنيف الفرعي في قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
+    }
     return updatedSub;
   }
 
-  public archiveSubcategory(categoryId: string, subcategoryId: string, adminUser?: AdminUser): void {
+  public async archiveSubcategory(categoryId: string, subcategoryId: string, _adminUser?: AdminUser): Promise<void> {
     const list = this.getCategories(true);
     const cat = list.find(c => c.id === categoryId);
-    if (!cat || !cat.subcategories) return;
+    const sub = cat?.subcategories?.find(s => s.id === subcategoryId);
+    if (!sub) throw new Error('التصنيف الفرعي المطلوب غير موجود.');
 
-    const sub = cat.subcategories.find(s => s.id === subcategoryId);
-    if (sub) {
-      sub.is_archived = true;
-      this.save(STORAGE_KEYS.CATEGORIES, list);
-      if (adminUser) {
-        this.logActivity(adminUser, 'أرشفة تصنيف فرعي', 'category', sub.id, sub.name_ar, `تم أرشفة فرع ${sub.name_ar}`);
-      }
-    }
+    const supabase = this.requireSupabase('أرشفة التصنيف الفرعي');
+    const { error } = await supabase.from('subcategories').update({ is_archived: true }).eq('id', subcategoryId);
+    if (error) throw new Error(`تعذر أرشفة التصنيف الفرعي في قاعدة البيانات: ${error.message}`);
+    sub.is_archived = true;
+    if (!this.save(STORAGE_KEYS.CATEGORIES, list)) throw new Error('تمت الأرشفة لكن تعذر تحديث الذاكرة المحلية.');
   }
 
-  public restoreSubcategory(categoryId: string, subcategoryId: string, adminUser?: AdminUser): void {
+  public async restoreSubcategory(categoryId: string, subcategoryId: string, _adminUser?: AdminUser): Promise<void> {
     const list = this.getCategories(true);
     const cat = list.find(c => c.id === categoryId);
-    if (!cat || !cat.subcategories) return;
+    const sub = cat?.subcategories?.find(s => s.id === subcategoryId);
+    if (!sub) throw new Error('التصنيف الفرعي المطلوب غير موجود.');
 
-    const sub = cat.subcategories.find(s => s.id === subcategoryId);
-    if (sub) {
-      sub.is_archived = false;
-      this.save(STORAGE_KEYS.CATEGORIES, list);
-      if (adminUser) {
-        this.logActivity(adminUser, 'استعادة تصنيف فرعي', 'category', sub.id, sub.name_ar, `تمت استعادة فرع ${sub.name_ar}`);
-      }
-    }
+    const supabase = this.requireSupabase('استعادة التصنيف الفرعي');
+    const { error } = await supabase.from('subcategories').update({ is_archived: false }).eq('id', subcategoryId);
+    if (error) throw new Error(`تعذر استعادة التصنيف الفرعي في قاعدة البيانات: ${error.message}`);
+    sub.is_archived = false;
+    if (!this.save(STORAGE_KEYS.CATEGORIES, list)) throw new Error('تمت الاستعادة لكن تعذر تحديث الذاكرة المحلية.');
   }
 
-  public deleteSubcategory(categoryId: string, subcategoryId: string, adminUser?: AdminUser): void {
+  public async deleteSubcategory(categoryId: string, subcategoryId: string, _adminUser?: AdminUser): Promise<void> {
     const list = this.getCategories(true);
     const cat = list.find(c => c.id === categoryId);
     if (!cat || !cat.subcategories) return;
 
     const target = cat.subcategories.find(s => s.id === subcategoryId);
+    if (!target) return;
+    const supabase = this.requireSupabase('حذف التصنيف الفرعي');
+    const { error } = await supabase.from('subcategories').delete().eq('id', subcategoryId);
+    if (error) throw new Error(`تعذر حذف التصنيف الفرعي من قاعدة البيانات: ${error.message}`);
     cat.subcategories = cat.subcategories.filter(s => s.id !== subcategoryId);
-    this.save(STORAGE_KEYS.CATEGORIES, list);
-    if (adminUser && target) {
-      this.logActivity(adminUser, 'حذف تصنيف فرعي', 'category', target.id, target.name_ar, `تم حذف فرع ${target.name_ar} من ${cat.name_ar}`);
-    }
+    if (!this.save(STORAGE_KEYS.CATEGORIES, list)) throw new Error('تم حذف التصنيف الفرعي لكن تعذر تحديث الذاكرة المحلية.');
   }
 
   // --- BRANDS ---
@@ -515,7 +651,17 @@ class DataStoreService {
     return includeArchived ? list : list.filter(b => !b.is_archived);
   }
 
-  public saveBrand(brand: Partial<Brand> & { name_ar: string; slug: string }, adminUser?: AdminUser): Brand {
+  public async refreshBrandsFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data, error } = await supabase.from('brands').select('*').order('name_ar');
+    if (error) throw new Error(`تعذر تحميل العلامات التجارية من قاعدة البيانات: ${error.message}`);
+    if (!this.save(STORAGE_KEYS.BRANDS, (data || []) as Brand[])) {
+      throw new Error('تعذر تخزين العلامات التجارية المحمّلة محليًا.');
+    }
+  }
+
+  public async saveBrand(brand: Partial<Brand> & { name_ar: string; slug: string }, _adminUser?: AdminUser): Promise<Brand> {
     const list = this.getBrands(true);
     let updatedBrand: Brand;
 
@@ -523,10 +669,6 @@ class DataStoreService {
       const idx = list.findIndex(b => b.id === brand.id);
       if (idx !== -1) {
         updatedBrand = { ...list[idx], ...brand } as Brand;
-        list[idx] = updatedBrand;
-        if (adminUser) {
-          this.logActivity(adminUser, 'تعديل ماركة / علامة تجارية', 'brand', updatedBrand.id, updatedBrand.name_ar);
-        }
       } else {
         throw new Error('Brand not found');
       }
@@ -542,23 +684,40 @@ class DataStoreService {
         created_at: new Date().toISOString(),
         is_archived: false
       };
-      list.push(updatedBrand);
-      if (adminUser) {
-        this.logActivity(adminUser, 'إضافة علامة تجارية', 'brand', updatedBrand.id, updatedBrand.name_ar);
-      }
     }
 
-    this.save(STORAGE_KEYS.BRANDS, list);
+    const supabase = this.requireSupabase('حفظ العلامة التجارية');
+    const { error } = await supabase.from('brands').upsert({
+      id: updatedBrand.id,
+      name_ar: updatedBrand.name_ar,
+      name_en: updatedBrand.name_en || null,
+      slug: updatedBrand.slug,
+      logo_url: updatedBrand.logo_url || null,
+      description: updatedBrand.description || null,
+      is_active: updatedBrand.is_active,
+      is_archived: updatedBrand.is_archived || false
+    }, { onConflict: 'id' });
+    if (error) throw new Error(`تعذر حفظ العلامة التجارية في قاعدة البيانات: ${error.message}`);
+
+    const currentIndex = list.findIndex((item) => item.id === updatedBrand.id);
+    if (currentIndex === -1) list.push(updatedBrand);
+    else list[currentIndex] = updatedBrand;
+    if (!this.save(STORAGE_KEYS.BRANDS, list)) {
+      throw new Error('تم حفظ العلامة التجارية في قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
+    }
     return updatedBrand;
   }
 
-  public deleteBrand(id: string, adminUser?: AdminUser): void {
-    let list = this.getBrands(true);
+  public async deleteBrand(id: string, _adminUser?: AdminUser): Promise<void> {
+    const list = this.getBrands(true);
     const target = list.find(b => b.id === id);
-    list = list.filter(b => b.id !== id);
-    this.save(STORAGE_KEYS.BRANDS, list);
-    if (adminUser && target) {
-      this.logActivity(adminUser, 'حذف علامة تجارية', 'brand', target.id, target.name_ar);
+    if (!target) return;
+    const supabase = this.requireSupabase('حذف العلامة التجارية');
+    const { error } = await supabase.from('brands').delete().eq('id', id);
+    if (error) throw new Error(`تعذر حذف العلامة التجارية من قاعدة البيانات: ${error.message}`);
+    const remaining = list.filter((brand) => brand.id !== id);
+    if (!this.save(STORAGE_KEYS.BRANDS, remaining)) {
+      throw new Error('تم حذف العلامة التجارية من قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
     }
   }
 
@@ -772,7 +931,7 @@ class DataStoreService {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    const { data, error } = await supabase.from('products').select('*');
+    const { data, error } = await supabase.from('products').select('*').order('display_order');
     if (error) throw new Error(`تعذر تحميل المنتجات من قاعدة البيانات: ${error.message}`);
     if (!data) return;
 
@@ -782,67 +941,94 @@ class DataStoreService {
     this.save(STORAGE_KEYS.PRODUCTS, [...productsById.values()]);
   }
 
-  public archiveProduct(id: string, adminUser?: AdminUser): void {
+  public async archiveProduct(id: string, _adminUser?: AdminUser): Promise<void> {
+    await this.setProductArchived(id, true);
+  }
+
+  public async restoreProduct(id: string, _adminUser?: AdminUser): Promise<void> {
+    await this.setProductArchived(id, false);
+  }
+
+  private async setProductArchived(id: string, isArchived: boolean): Promise<void> {
     const list = this.getProducts(true);
     const prod = list.find(p => p.id === id);
-    if (prod) {
-      prod.is_archived = true;
-      this.save(STORAGE_KEYS.PRODUCTS, list);
-      if (adminUser) {
-        this.logActivity(adminUser, 'أرشفة منتج', 'product', prod.id, prod.name_ar);
-      }
+    if (!prod) throw new Error('المنتج المطلوب غير موجود.');
+    const supabase = this.requireSupabase('تحديث حالة المنتج');
+    const { error } = await supabase.from('products').update({ is_archived: isArchived }).eq('id', id);
+    if (error) throw new Error(`تعذر تحديث حالة المنتج في قاعدة البيانات: ${error.message}`);
+    prod.is_archived = isArchived;
+    if (!this.save(STORAGE_KEYS.PRODUCTS, list)) {
+      throw new Error('تم تحديث المنتج في قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
     }
   }
 
-  public restoreProduct(id: string, adminUser?: AdminUser): void {
+  public async deleteProduct(id: string, _adminUser?: AdminUser): Promise<void> {
     const list = this.getProducts(true);
-    const prod = list.find(p => p.id === id);
-    if (prod) {
-      prod.is_archived = false;
-      this.save(STORAGE_KEYS.PRODUCTS, list);
-      if (adminUser) {
-        this.logActivity(adminUser, 'استعادة منتج', 'product', prod.id, prod.name_ar);
-      }
+    if (!list.some((product) => product.id === id)) return;
+    const supabase = this.requireSupabase('حذف المنتج');
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) throw new Error(`تعذر حذف المنتج من قاعدة البيانات: ${error.message}`);
+    if (!this.save(STORAGE_KEYS.PRODUCTS, list.filter((product) => product.id !== id))) {
+      throw new Error('تم حذف المنتج من قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
     }
   }
 
-  public deleteProduct(id: string, adminUser?: AdminUser): void {
-    let list = this.getProducts(true);
-    const target = list.find(p => p.id === id);
-    list = list.filter(p => p.id !== id);
-    this.save(STORAGE_KEYS.PRODUCTS, list);
-    if (adminUser && target) {
-      this.logActivity(adminUser, 'حذف نهائي لمنتج', 'product', target.id, target.name_ar);
-    }
+  public getDeliveryZones(): Governorate[] {
+    return this.readLocal(STORAGE_KEYS.DELIVERY_ZONES, this.deliveryZones);
   }
 
-  public incrementProductViews(id: string): void {
-    const list = this.getProducts(true);
-    const prod = list.find(p => p.id === id);
-    if (prod) {
-      prod.views_count = (prod.views_count || 0) + 1;
-      this.save(STORAGE_KEYS.PRODUCTS, list);
+  public getDeliveryFeeInfo(governorate?: string): { fee: number | null; textAr: string; textEn: string } {
+    const zone = this.getDeliveryZones().find((item) => item.name_ar === governorate || item.id === governorate);
+    if (!zone) return getDeliveryFeeByGov(governorate);
+    if (zone.delivery_fee === null || zone.delivery_fee === undefined) {
+      return { fee: null, textAr: 'لم يحدد بعد', textEn: 'To be determined' };
     }
+    return {
+      fee: zone.delivery_fee,
+      textAr: `${zone.delivery_fee} ج.م`,
+      textEn: `${zone.delivery_fee} EGP`
+    };
   }
 
-  public incrementProductRequests(id: string): void {
-    const list = this.getProducts(true);
-    const prod = list.find(p => p.id === id);
-    if (prod) {
-      prod.request_count = (prod.request_count || 0) + 1;
-      this.save(STORAGE_KEYS.PRODUCTS, list);
+  public async refreshDeliveryZonesFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const [{ data: zones, error: zoneError }, { data: areas, error: areaError }] = await Promise.all([
+      supabase.from('delivery_zones').select('governorate,governorate_en,delivery_fee,is_active').eq('is_active', true).order('governorate'),
+      supabase.from('delivery_zone_areas').select('governorate,area_ar').order('area_ar')
+    ]);
+    if (zoneError) throw new Error(`تعذر تحميل مناطق التوصيل: ${zoneError.message}`);
+    if (areaError) throw new Error(`تعذر تحميل المناطق التابعة لمحافظات التوصيل: ${areaError.message}`);
+
+    const areasByGovernorate = new Map<string, string[]>();
+    for (const area of areas || []) {
+      const list = areasByGovernorate.get(area.governorate) || [];
+      list.push(area.area_ar);
+      areasByGovernorate.set(area.governorate, list);
+    }
+
+    const canonicalByName = new Map(EGYPTIAN_GOVERNORATES.map((zone) => [zone.name_ar, zone]));
+    this.deliveryZones = (zones || []).map((zone) => {
+      const canonical = canonicalByName.get(zone.governorate);
+      return {
+        id: canonical?.id || zone.governorate,
+        name_ar: zone.governorate,
+        name_en: zone.governorate_en || canonical?.name_en || zone.governorate,
+        delivery_fee: zone.delivery_fee === null ? null : Number(zone.delivery_fee),
+        cities: areasByGovernorate.get(zone.governorate) || []
+      };
+    });
+    if (!this.save(STORAGE_KEYS.DELIVERY_ZONES, this.deliveryZones)) {
+      throw new Error('تعذر تخزين بيانات التوصيل المحمّلة محليًا.');
     }
   }
 
   // --- ORDERS ---
-  private getNextOrderNumber(): string {
-    const counter = Number(localStorage.getItem(STORAGE_KEYS.ORDER_COUNTER) || '142') + 1;
-    localStorage.setItem(STORAGE_KEYS.ORDER_COUNTER, counter.toString());
-    const padded = counter.toString().padStart(6, '0');
-    return `BH-2026-${padded}`;
-  }
-
   public getOrders(): Order[] {
+    if (getSupabaseClient()) {
+      const databaseOrders = this.readLocal<Order[] | null>(STORAGE_KEYS.ORDERS_DATABASE, null);
+      if (databaseOrders) return databaseOrders;
+    }
     return this.load<Order[]>(STORAGE_KEYS.ORDERS, INITIAL_ORDERS);
   }
 
@@ -850,149 +1036,54 @@ class DataStoreService {
     const supabase = getSupabaseClient();
     if (!supabase) throw new Error('اتصال قاعدة البيانات غير متاح.');
 
-    const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-    if (error) throw new Error(`تعذر تحميل الطلبات من قاعدة البيانات: ${error.message}`);
-
-    const storedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    const demoOrderIds = new Set(LEGACY_DEMO_ORDER_IDS);
-    const localOrders = storedOrders
-      ? (JSON.parse(storedOrders) as Order[]).filter((order) => !demoOrderIds.has(order.id))
-      : [];
-    const ordersById = new Map(localOrders.map((order) => [order.id, order]));
-    for (const row of data || []) {
-      const orderRow = row as typeof row & { customer_info?: CustomerInfo };
-      const { customer_info, ...orderFields } = orderRow;
-      if (!customer_info) throw new Error(`بيانات العميل غير موجودة للطلب ${orderRow.id}.`);
-      ordersById.set(orderRow.id, { ...orderFields, customer: customer_info } as Order);
+    const pageSize = 1000;
+    const rows: Array<Record<string, unknown>> = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await supabase.from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+      if (error) throw new Error(`تعذر تحميل الطلبات من قاعدة البيانات: ${error.message}`);
+      rows.push(...(data || []) as Array<Record<string, unknown>>);
+      if (!data || data.length < pageSize) break;
     }
 
-    this.save(STORAGE_KEYS.ORDERS, [...ordersById.values()]);
+    const orders = rows.map((row) => {
+      const { customer_info, ...orderFields } = row as Record<string, unknown> & { customer_info?: CustomerInfo };
+      if (!customer_info) throw new Error(`بيانات العميل غير موجودة للطلب ${String(orderFields.id)}.`);
+      return { ...orderFields, customer: customer_info } as Order;
+    });
+    if (!this.save(STORAGE_KEYS.ORDERS_DATABASE, orders)) {
+      throw new Error('تعذر تخزين الطلبات المحمّلة محليًا.');
+    }
   }
 
   public getOrderById(id: string): Order | undefined {
     return this.getOrders().find(o => o.id === id);
   }
 
-  public createOrder(orderData: {
-    customer: CustomerInfo;
-    items: OrderItem[];
-    total_amount: number;
-    deposit_percentage?: number;
-    deposit_amount?: number;
-    deposit_payment_method?: DepositPaymentMethod;
-    remaining_percentage?: number;
-    remaining_amount?: number;
-    remaining_payment_method?: RemainingPaymentMethod;
-    delivery_fee?: number | null;
-    delivery_fee_text?: string;
-    visitor_id?: string;
-    device_type?: string;
-    traffic_source?: string;
-  }): Order {
-    const orders = this.getOrders();
-    const orderNumber = this.getNextOrderNumber();
-    const now = new Date().toISOString();
-
-    const newOrder: Order = {
-      id: `ord-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
-      order_number: orderNumber,
-      customer: orderData.customer,
-      items: orderData.items,
-      total_amount: orderData.total_amount,
-      deposit_percentage: orderData.deposit_percentage,
-      deposit_amount: orderData.deposit_amount,
-      deposit_payment_method: orderData.deposit_payment_method,
-      remaining_percentage: orderData.remaining_percentage,
-      remaining_amount: orderData.remaining_amount,
-      remaining_payment_method: orderData.remaining_payment_method,
-      delivery_fee: orderData.delivery_fee,
-      delivery_fee_text: orderData.delivery_fee_text,
-      status: 'new',
-      whatsapp_sent: true,
-      visitor_id: orderData.visitor_id,
-      device_type: orderData.device_type || 'mobile',
-      traffic_source: orderData.traffic_source || 'direct',
-      status_history: [
-        {
-          status: 'new',
-          timestamp: now,
-          note: 'تم استلام طلب الشراء عبر الموقع وجاهز للإرسال على الواتساب'
-        }
-      ],
-      created_at: now,
-      updated_at: now
-    };
-
-    orders.unshift(newOrder);
-    this.save(STORAGE_KEYS.ORDERS, orders);
-
-    // Increment request count for products
-    orderData.items.forEach(item => {
-      this.incrementProductRequests(item.product_id);
-    });
-
-    // Sync / insert order to Supabase if connected
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      supabase.from('orders').insert([{
-        id: newOrder.id,
-        order_number: newOrder.order_number,
-        customer_info: newOrder.customer,
-        items: newOrder.items,
-        total_amount: newOrder.total_amount,
-        deposit_percentage: newOrder.deposit_percentage,
-        deposit_amount: newOrder.deposit_amount,
-        deposit_payment_method: newOrder.deposit_payment_method,
-        remaining_percentage: newOrder.remaining_percentage,
-        remaining_amount: newOrder.remaining_amount,
-        remaining_payment_method: newOrder.remaining_payment_method,
-        delivery_fee: newOrder.delivery_fee,
-        delivery_fee_text: newOrder.delivery_fee_text,
-        status: newOrder.status,
-        whatsapp_sent: true,
-        visitor_id: newOrder.visitor_id,
-        device_type: newOrder.device_type,
-        traffic_source: newOrder.traffic_source,
-        status_history: newOrder.status_history
-      }]).then(({ error }) => {
-        if (error) console.warn('Supabase order sync notice:', error.message);
-      });
-    }
-
-    return newOrder;
-  }
-
-  public updateOrderStatus(orderId: string, newStatus: OrderStatus, note?: string, adminUser?: AdminUser): Order {
+  public async updateOrderStatus(orderId: string, newStatus: OrderStatus, note?: string, _adminUser?: AdminUser): Promise<Order> {
     const orders = this.getOrders();
     const order = orders.find(o => o.id === orderId);
     if (!order) {
       throw new Error('Order not found');
     }
 
-    const now = new Date().toISOString();
-    order.status = newStatus;
-    order.updated_at = now;
-    order.status_history.push({
-      status: newStatus,
-      timestamp: now,
-      note: note || `تغيير الحالة إلى ${this.getStatusArabicName(newStatus)}`,
-      changed_by: adminUser?.name || 'النظام'
+    const supabase = this.requireSupabase('تحديث حالة الطلب');
+    const { data, error } = await supabase.rpc('update_order_status', {
+      order_id_input: orderId,
+      status_input: newStatus,
+      note_input: note || null
     });
-
-    this.save(STORAGE_KEYS.ORDERS, orders);
-
-    if (adminUser) {
-      this.logActivity(
-        adminUser,
-        'تحديث حالة طلب',
-        'order',
-        order.id,
-        order.order_number,
-        `تم تغيير حالة الطلب إلى: ${this.getStatusArabicName(newStatus)} للعميل ${order.customer.name}`
-      );
+    if (error) throw new Error(`تعذر تحديث حالة الطلب في قاعدة البيانات: ${error.message}`);
+    const { customer_info, ...orderFields } = data as Record<string, unknown> & { customer_info?: CustomerInfo };
+    if (!customer_info) throw new Error('تم تحديث الطلب لكن استجابة قاعدة البيانات لا تحتوي بيانات العميل.');
+    const updatedOrder = { ...orderFields, customer: customer_info } as Order;
+    const updatedOrders = orders.map((current) => current.id === orderId ? updatedOrder : current);
+    if (!this.save(STORAGE_KEYS.ORDERS_DATABASE, updatedOrders)) {
+      throw new Error('تم تحديث الطلب في قاعدة البيانات لكن تعذر تحديث الذاكرة المحلية.');
     }
-
-    return order;
+    return updatedOrder;
   }
 
   public getStatusArabicName(status: OrderStatus): string {
@@ -1049,7 +1140,23 @@ class DataStoreService {
 
   // --- ANALYTICS EVENTS ---
   public getAnalyticsEvents(): AnalyticsEvent[] {
+    if (getSupabaseClient()) {
+      const databaseEvents = this.readLocal<AnalyticsEvent[] | null>(STORAGE_KEYS.ANALYTICS_DATABASE, null);
+      if (databaseEvents) return databaseEvents;
+    }
     return this.load<AnalyticsEvent[]>(STORAGE_KEYS.ANALYTICS, []);
+  }
+
+  public async refreshAnalyticsFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data, error } = await supabase.from('analytics_events').select('*')
+      .order('timestamp', { ascending: false })
+      .limit(1000);
+    if (error) throw new Error(`تعذر تحميل التحليلات من قاعدة البيانات: ${error.message}`);
+    if (!this.save(STORAGE_KEYS.ANALYTICS_DATABASE, (data || []) as AnalyticsEvent[])) {
+      throw new Error('تعذر تخزين التحليلات المحمّلة محليًا.');
+    }
   }
 
   public logAnalyticsEvent(event: Omit<AnalyticsEvent, 'id' | 'timestamp'>): void {
@@ -1262,68 +1369,73 @@ class DataStoreService {
 
   // --- ADMIN USERS & AUTH ---
   public getAdminUsers(): AdminUser[] {
+    if (getSupabaseClient()) {
+      const databaseUsers = this.readLocal<AdminUser[] | null>(STORAGE_KEYS.ADMIN_USERS_DATABASE, null);
+      if (databaseUsers) return databaseUsers;
+    }
     return this.load<AdminUser[]>(STORAGE_KEYS.ADMIN_USERS, INITIAL_ADMIN_USERS);
   }
 
-  public saveAdminUser(user: Partial<AdminUser> & { name: string; email: string; role: any }): AdminUser {
-    const list = this.getAdminUsers();
-    let updated: AdminUser;
-
-    if (user.id) {
-      const idx = list.findIndex(u => u.id === user.id);
-      if (idx !== -1) {
-        updated = { ...list[idx], ...user } as AdminUser;
-        list[idx] = updated;
-      } else {
-        throw new Error('User not found');
-      }
-    } else {
-      updated = {
-        id: `usr-${Date.now().toString(36)}`,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        created_at: new Date().toISOString()
-      };
-      list.push(updated);
+  public async refreshAdminUsersFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data, error } = await supabase.from('admin_users')
+      .select('id,auth_user_id,name,email,role,avatar_url,last_login_at,created_at')
+      .order('created_at');
+    if (error) throw new Error(`تعذر تحميل حسابات الإدارة من قاعدة البيانات: ${error.message}`);
+    if (!this.save(STORAGE_KEYS.ADMIN_USERS_DATABASE, (data || []) as AdminUser[])) {
+      throw new Error('تعذر تخزين حسابات الإدارة المحمّلة محليًا.');
     }
+  }
 
-    this.save(STORAGE_KEYS.ADMIN_USERS, list);
-    return updated;
+  public async inviteAdminUser(input: { name: string; email: string; role: AdminUser['role'] }): Promise<AdminUser> {
+    const supabase = this.requireSupabase('دعوة مستخدم إداري');
+    const { data, error } = await supabase.functions.invoke<{ adminUser?: AdminUser; error?: string }>('invite-admin-user', {
+      body: {
+        name: input.name.trim(),
+        email: input.email.trim(),
+        role: input.role
+      }
+    });
+    if (error) throw new Error(`تعذر إرسال دعوة المستخدم الإداري: ${error.message}`);
+    if (!data?.adminUser) throw new Error(data?.error || 'لم تُرجع خدمة الدعوات حسابًا إداريًا.');
+    await this.refreshAdminUsersFromDatabase();
+    return data.adminUser;
   }
 
   // --- ACTIVITY LOGS ---
   public getActivityLogs(): ActivityLog[] {
+    if (getSupabaseClient()) {
+      const databaseLogs = this.readLocal<ActivityLog[] | null>(STORAGE_KEYS.ACTIVITY_LOGS_DATABASE, null);
+      if (databaseLogs) return databaseLogs;
+    }
     return this.load<ActivityLog[]>(STORAGE_KEYS.ACTIVITY_LOGS, []);
   }
 
-  public logActivity(
-    admin: AdminUser,
-    action: string,
-    target_type: ActivityLog['target_type'],
-    target_id?: string,
-    target_title?: string,
-    details?: string
-  ): void {
-    const logs = this.getActivityLogs();
-    const newLog: ActivityLog = {
-      id: `log-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`,
-      admin_id: admin.id,
-      admin_name: admin.name,
-      admin_role: admin.role,
-      action,
-      target_type,
-      target_id,
-      target_title,
-      details,
-      timestamp: new Date().toISOString()
-    };
-
-    logs.unshift(newLog);
-    if (logs.length > 500) {
-      logs.pop();
+  public async refreshActivityLogsFromDatabase(): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data, error } = await supabase.from('admin_activity_logs').select('*')
+      .order('timestamp', { ascending: false })
+      .limit(500);
+    if (error) throw new Error(`تعذر تحميل سجل العمليات من قاعدة البيانات: ${error.message}`);
+    if (!this.save(STORAGE_KEYS.ACTIVITY_LOGS_DATABASE, (data || []) as ActivityLog[])) {
+      throw new Error('تعذر تخزين سجل العمليات المحمّل محليًا.');
     }
-    this.save(STORAGE_KEYS.ACTIVITY_LOGS, logs);
+  }
+
+  public logActivity(
+    _admin: AdminUser,
+    _action: string,
+    _target_type: ActivityLog['target_type'],
+    _target_id?: string,
+    _target_title?: string,
+    _details?: string
+  ): void {
+    void this.refreshActivityLogsFromDatabase().catch((error: unknown) => {
+      console.error('Failed to refresh audit logs after an administrative change:', error);
+      captureAppException(error, { source: 'dataStore.refreshActivityLogs' });
+    });
   }
 
   // Reset database to initial seed data for demo/testing
@@ -1336,8 +1448,6 @@ class DataStoreService {
     localStorage.removeItem(STORAGE_KEYS.ANALYTICS);
     localStorage.removeItem(STORAGE_KEYS.ADMIN_USERS);
     localStorage.removeItem(STORAGE_KEYS.ACTIVITY_LOGS);
-    localStorage.removeItem(STORAGE_KEYS.ORDER_COUNTER);
-
     this.save(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS);
     this.save(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES);
     this.save(STORAGE_KEYS.BRANDS, INITIAL_BRANDS);

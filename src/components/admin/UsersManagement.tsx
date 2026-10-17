@@ -13,26 +13,44 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({ currentUser })
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formRole, setFormRole] = useState<AdminRole>('order_manager');
+  const [operationError, setOperationError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setUsers(dataStore.getAdminUsers());
+    const loadUsers = () => {
+      void dataStore.refreshAdminUsersFromDatabase().then(() => {
+        setUsers(dataStore.getAdminUsers());
+        setOperationError('');
+      }).catch((error: unknown) => {
+        setOperationError(error instanceof Error ? error.message : 'تعذر تحميل حسابات الإدارة.');
+      });
+    };
+    loadUsers();
     return dataStore.subscribe(() => {
       setUsers(dataStore.getAdminUsers());
     });
   }, []);
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim() || !formEmail.trim()) return;
 
-    dataStore.saveAdminUser({
-      name: formName.trim(),
-      email: formEmail.trim(),
-      role: formRole
-    });
-
-    dataStore.logActivity(currentUser, 'إضافة مستخدم إداري جديد', 'auth', undefined, formName, `تم إنشاء حساب إداري بصلاحية ${formRole}`);
-    setIsModalOpen(false);
+    setOperationError('');
+    setIsSubmitting(true);
+    try {
+      await dataStore.inviteAdminUser({
+        name: formName.trim(),
+        email: formEmail.trim(),
+        role: formRole
+      });
+      setUsers(dataStore.getAdminUsers());
+      setIsModalOpen(false);
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'تعذر إرسال دعوة المستخدم الإداري.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getRoleArabicName = (role: AdminRole) => {
@@ -47,6 +65,11 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({ currentUser })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {operationError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {operationError}
+        </div>
+      )}
       {/* Header */}
       <div
         style={{
@@ -218,6 +241,11 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({ currentUser })
             </div>
 
             <form onSubmit={handleSaveUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {operationError && (
+                <div role="alert" style={{ padding: '10px 12px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px' }}>
+                  {operationError}
+                </div>
+              )}
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px' }}>
                   اسم المستخدم <span style={{ color: '#DC2626' }}>*</span>
@@ -266,8 +294,8 @@ export const UsersManagement: React.FC<UsersManagementProps> = ({ currentUser })
                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">
                   إلغاء
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '8px 24px', fontWeight: 800 }}>
-                  حفظ المستخدم
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ padding: '8px 24px', fontWeight: 800 }}>
+                  {isSubmitting ? 'جارٍ إرسال الدعوة...' : 'إرسال دعوة المستخدم'}
                 </button>
               </div>
             </form>

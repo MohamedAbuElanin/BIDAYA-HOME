@@ -11,6 +11,8 @@ export const BrandManagement: React.FC<BrandManagementProps> = ({ currentUser })
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [operationError, setOperationError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formNameAr, setFormNameAr] = useState('');
   const [formNameEn, setFormNameEn] = useState('');
@@ -50,34 +52,51 @@ export const BrandManagement: React.FC<BrandManagementProps> = ({ currentUser })
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNameAr.trim()) return;
 
-    dataStore.saveBrand(
-      {
-        id: editingBrand?.id,
-        name_ar: formNameAr,
-        name_en: formNameEn,
-        slug: formSlug || formNameAr.toLowerCase().replace(/\s+/g, '-'),
-        logo_url: formLogoUrl,
-        description: formDesc,
-        is_active: formIsActive
-      },
-      currentUser
-    );
-
-    setIsModalOpen(false);
+    setOperationError('');
+    setIsSaving(true);
+    try {
+      await dataStore.saveBrand(
+        {
+          id: editingBrand?.id,
+          name_ar: formNameAr,
+          name_en: formNameEn,
+          slug: formSlug || formNameAr.toLowerCase().replace(/\s+/g, '-'),
+          logo_url: formLogoUrl,
+          description: formDesc,
+          is_active: formIsActive
+        },
+        currentUser
+      );
+      setIsModalOpen(false);
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'تعذر حفظ العلامة التجارية.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('هل تريد حذف هذه العلامة التجارية؟')) {
-      dataStore.deleteBrand(id, currentUser);
+      setOperationError('');
+      try {
+        await dataStore.deleteBrand(id, currentUser);
+      } catch (error) {
+        setOperationError(error instanceof Error ? error.message : 'تعذر حذف العلامة التجارية.');
+      }
     }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {operationError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {operationError}
+        </div>
+      )}
       {/* Header */}
       <div
         style={{
@@ -219,6 +238,11 @@ export const BrandManagement: React.FC<BrandManagementProps> = ({ currentUser })
             </div>
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {operationError && (
+                  <div role="alert" style={{ padding: '10px 12px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px' }}>
+                    {operationError}
+                  </div>
+                )}
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px' }}>
                   اسم الماركة بالعربي <span style={{ color: '#DC2626' }}>*</span>
@@ -273,8 +297,8 @@ export const BrandManagement: React.FC<BrandManagementProps> = ({ currentUser })
                   <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">
                     إلغاء
                   </button>
-                  <button type="submit" className="btn btn-primary" style={{ padding: '8px 24px', fontWeight: 800 }}>
-                    حفظ
+                  <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ padding: '8px 24px', fontWeight: 800 }}>
+                    {isSaving ? 'جارٍ الحفظ...' : 'حفظ'}
                   </button>
                 </div>
               </div>

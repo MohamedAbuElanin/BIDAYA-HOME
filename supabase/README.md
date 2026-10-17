@@ -1,20 +1,29 @@
-# Supabase review package
+# Supabase database
 
-The configured Supabase project contains the application tables, helper
-functions, expected initial-schema policies, product image bucket and storage
-policies. The analytics ingestion migration
-(`20261015000100_allow_public_analytics_event_inserts.sql`) was also manually
-applied through the Supabase Dashboard SQL Editor after approval.
+The linked production project is `hkanvnbdmgzvfcwuqdjj`. Its core application
+tables, helper functions, RLS policies, product-image bucket, and storage
+policies already exist. The analytics ingestion migration
+(`20261015000100_allow_public_analytics_event_inserts.sql`) was manually
+applied through the Supabase Dashboard SQL Editor.
 
-The project has no `supabase_migrations.schema_migrations` table. As a result,
-`supabase migration list --project-ref hkanvnbdmgzvfcwuqdjj` reports all three
-local migrations as pending remotely, even though their objects are present.
-This object-presence check does not prove exact schema parity: for example,
-the existing product image bucket has no file-size limit, while the storage
-migration's insert would set one only when creating a new bucket. Do not run
-`supabase db push` or repair migration history until the complete remote schema,
-constraints, triggers, grants, and bucket configuration have been compared
-with the local migrations and any differences have been resolved.
+The original three migration versions were reconciled in the remote migration
+ledger only after comparing production columns, constraints, indexes, grants,
+RLS policies, triggers, security functions, and Storage policies against the
+local definitions. The readiness migration and both generated seeds have now
+been applied. Docker was unavailable, so this reconciliation used direct
+PostgreSQL catalog queries rather than `db diff`.
+
+Production readiness was verified after application:
+
+- 10 categories, 69 subcategories, 3 brands, 1 product, and 1 settings row.
+- 27 delivery zones, all with English labels, and 317 delivery areas.
+- Product images are limited to 1 MiB and WebP/PNG/JPEG.
+- The existing single administrator and product remain; no orders, demo
+  products, or demo administrators were inserted.
+- Both Edge Functions are active with JWT verification and return successful
+  CORS preflight responses for `https://bidaya-home.pages.dev`.
+- No production test order was created. Auth email delivery has not been
+  verified, so administrator invitations have not been tested.
 
 ## What the initial migration creates
 
@@ -25,7 +34,8 @@ with the local migrations and any differences have been resolved.
   public write policy; the separate analytics migration allows constrained
   anonymous inserts, but not public reads or updates).
 - An atomic order-number sequence and a restricted status-update RPC.
-- RLS enabled on every application table, with public catalog reads only.
+- RLS enabled on every application table, with public catalog reads and
+  public reads limited to active delivery zones/areas.
 
 `customers` is intentionally not created. The current application derives customer summaries from order records and does not write to a separate customer table. Creating one now would duplicate customer PII without serving the current UI.
 
@@ -39,43 +49,45 @@ with the authenticated administrator session and maps `customer_info` to the
 UI's `Order.customer`. The optional `supabase_url` and `supabase_anon_key` UI
 fields are intentionally not persisted in `site_settings`.
 
-The storefront still keeps its starter catalog and most dashboard state in
-`localStorage`. Product rows are now loaded from Supabase and merged with the
-local starter catalog. Saving a product requires an authenticated catalog
-administrator; the selected category, subcategory, or brand is created in the
-database if it is not already there. Uploaded product images use the public
-`product-images` Storage bucket, with administrator-only writes.
+The storefront and administration UI load catalog, settings, orders, users,
+analytics, delivery zones, and activity logs from Supabase where access is
+granted. Browser storage is a cache, not the authoritative store. Product
+images remain public storefront assets; only authenticated catalog managers
+can upload or delete them.
 
-Orders are persisted only by the `submit-order` Edge Function. Opening or
-sending its WhatsApp fallback draft does not save an order; the checkout UI
-explicitly labels that path as unregistered. Analytics remains local-first;
-the separate analytics migration permits constrained anonymous event inserts
-without allowing public reads or updates.
+Orders are persisted only by the `submit-order` Edge Function. The
+`invite-admin-user` function verifies the caller's Auth JWT and `super_admin`
+role before inviting an account. Both functions are deployed to the production
+project. Their allowed origins are configured; Auth email delivery still needs
+verification before the invite workflow is ready to use. A WhatsApp fallback
+draft is not an order.
 
-The initial schema and Edge Function sources have not been deployed or executed
-against a database from this workspace through the Supabase CLI. The local
-function has unit tests, but there is no initialized local Supabase stack or
-integration-test harness here.
+The existing production catalog and settings are preserved. The generated
+store catalog seed inserts only missing categories, subcategories, brands,
+and settings; it did not import demo products, orders, or administrator
+accounts. The delivery seed preserves live fees and labels, updated only
+missing English governorate labels, and inserted only missing zones and areas.
 
-## Required review decisions before applying
+## Production deployment record
 
-1. Approve the configured Supabase project reference as the intended target.
-2. Approve the initial catalog/settings/delivery-zone import source. Demo orders and demo administrators must not be imported as production data.
-3. Confirm whether public Supabase Auth sign-up should remain enabled. It is safe to leave enabled only because the migration grants no role on sign-up and no user may alter `admin_users`.
-4. Review and deploy the existing checkout Edge Function before allowing
-   checkout traffic. It validates the payload shape and limits,
-   re-read product availability/prices and delivery-zone fees server-side,
-   calculate every monetary amount, allocate `next_order_number()` server-side
-   (the migration grants it only to `service_role`),
-   and return the existing order for the same idempotency key. It must never
-   accept browser-provided totals, order numbers, prices, delivery fees, status,
-   or role data as authoritative.
-5. Add staging tests for RLS, first-admin provisioning, idempotent checkout,
-   order-number concurrency, and Arabic/English catalog reads.
+Completed after a production backup was confirmed:
+
+1. Verified that only `20261017000100_database_readiness.sql` was pending in
+   the dry-run plan.
+2. Reconciled existing versions `20261013000100`, `20261014000100`, and
+   `20261015000100` as applied, then applied the readiness migration.
+3. Applied `database/seed_delivery_zones.sql` and
+   `database/seed_store_catalog.sql`.
+4. Set both allowed-origin secrets and deployed `submit-order` and
+   `invite-admin-user`.
+
+Do not create test production orders or send test administrator invitations.
+Validate those workflows on staging; test administrator email delivery in
+Supabase before inviting real staff.
 
 ## Staging commands
 
-Install the Supabase CLI outside this repository, authenticate, then link a dedicated staging project:
+Link a dedicated staging project before testing new migrations:
 
 ```powershell
 supabase login
@@ -84,30 +96,29 @@ supabase db push --dry-run
 supabase db push
 ```
 
-This also applies `20261014000100_product_image_storage.sql`, which enables
-public product-image reads and catalog-administrator-only uploads. Run policy
-and schema checks in the staging SQL editor after the migrations. Do not run
-`supabase db push` against production until a separate production approval is
-given.
+Run policy and schema checks in the staging SQL editor after applying
+migrations. The production migration history is now reconciled. Keep using a dedicated
+staging project for future migration rehearsals.
 
 ## First administrator provisioning
 
+The production project already has its owner account linked to a
+`super_admin` row. For a new project only:
+
 1. In Supabase Auth, create/invite the owner account and verify its email.
 2. Obtain its immutable Auth user UUID from the Dashboard.
-3. As the project owner in the SQL Editor, insert one matching row into `public.admin_users` with the Auth UUID and `super_admin` role.
-4. Verify the user can select only their own profile and that a regular signed-in user cannot select or change any administrator role.
+3. As the project owner in the SQL Editor, insert one matching row into
+   `public.admin_users` with the Auth UUID and `super_admin` role.
+4. Verify the user can select only their own profile and that a regular
+   signed-in user cannot select or change any administrator role.
 
 Do not add a browser-side role selector, email-based promotion rule, or public `admin_users` insert/update policy.
 
-## Rerun and destructive-change notes
+## Readiness migration notes
 
-For its intended target—an empty project—this migration is rerunnable: object
-creation uses `if not exists`/`create or replace`, and named policies and
-triggers are replaced before recreation. It is not a schema-reconciliation
-migration: `create table if not exists` will not retrofit an existing divergent
-table definition. Review any non-empty target manually before applying.
-
-It contains no table/data `drop`, `delete`, `truncate`, or `alter ... drop`
-statement. The only drops are this migration's own named `set_*_updated_at`
-triggers and named RLS policies, immediately recreated with the reviewed
-definitions.
+`20261017000100_database_readiness.sql` is intended for the existing non-empty
+production schema, not as a replacement for the initial migration. It adds
+delivery area storage and English governorate labels, scoped public delivery
+reads, storage upload limits, indexes, audit triggers, and the safer order
+status RPC. It does not delete application records. It has been applied to
+production; test future changes on staging first.

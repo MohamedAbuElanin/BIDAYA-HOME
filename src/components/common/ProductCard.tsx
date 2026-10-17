@@ -41,7 +41,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onOpenDetails
       product_name: productName,
       sku: product.sku
     });
-    dataStore.incrementProductViews(product.id);
     onOpenDetails(product);
   };
 

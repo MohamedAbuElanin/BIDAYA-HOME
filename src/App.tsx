@@ -61,9 +61,9 @@ const Storefront: React.FC = () => {
   }, [location.pathname, routeName]);
 
   useEffect(() => {
-    dataStore.refreshProductsFromDatabase().catch((error: unknown) => {
-      console.error('Failed to load catalog products from the database:', error);
-      captureAppException(error, { source: 'catalog.remote_load' });
+    dataStore.refreshStorefrontData().catch((error: unknown) => {
+      console.error('Failed to load storefront data from the database:', error);
+      captureAppException(error, { source: 'storefront.remote_load' });
     });
   }, []);
 

@@ -2,18 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
   Package,
   ShoppingBag,
-  Users,
   TrendingUp,
   Eye,
-  MessageCircle,
-  Truck,
-  CheckCircle,
-  Clock,
   Smartphone,
   Monitor,
   Tablet,
-  ArrowUpRight,
-  Sparkles
+  ArrowUpRight
 } from 'lucide-react';
 import { dataStore } from '../../services/dataStore';
 import { Order, Product, AnalyticsEvent, OrderStatus } from '../../types';
@@ -23,14 +17,24 @@ interface DashboardOverviewProps {
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigateTab }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [events, setEvents] = useState<AnalyticsEvent[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => dataStore.getProducts());
+  const [orders, setOrders] = useState<Order[]>(() => dataStore.getOrders());
+  const [events, setEvents] = useState<AnalyticsEvent[]>(() => dataStore.getAnalyticsEvents());
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    setProducts(dataStore.getProducts());
-    setOrders(dataStore.getOrders());
-    setEvents(dataStore.getAnalyticsEvents());
+    void Promise.all([
+      dataStore.refreshProductsFromDatabase(),
+      dataStore.refreshOrdersFromDatabase(),
+      dataStore.refreshAnalyticsFromDatabase()
+    ]).then(() => {
+      setProducts(dataStore.getProducts());
+      setOrders(dataStore.getOrders());
+      setEvents(dataStore.getAnalyticsEvents());
+      setLoadError('');
+    }).catch((error: unknown) => {
+      setLoadError(error instanceof Error ? error.message : 'تعذر تحميل بيانات لوحة المؤشرات.');
+    });
 
     return dataStore.subscribe(() => {
       setProducts(dataStore.getProducts());
@@ -45,33 +49,50 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
   const totalOrders = orders.length;
   const newOrders = orders.filter(o => o.status === 'new').length;
   const confirmedOrders = orders.filter(o => o.status === 'confirmed' || o.status === 'delivered').length;
-  const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
   
   const totalRevenue = orders
     .filter(o => o.status !== 'cancelled')
     .reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
 
-  const totalViews = products.reduce((sum, p) => sum + (p.views_count || 0), 0);
-  const totalRequests = products.reduce((sum, p) => sum + (p.request_count || 0), 0);
+  const totalViews = events.filter(event => event.event_name === 'PRODUCT_VIEW').length;
 
   // Visitors & Devices from events / sessions
-  const uniqueVisitors = new Set(events.map(e => e.visitor_id)).size || 126;
-  const mobileCount = events.filter(e => e.device_type === 'mobile').length || 78;
-  const desktopCount = events.filter(e => e.device_type === 'desktop').length || 38;
-  const tabletCount = events.filter(e => e.device_type === 'tablet').length || 10;
-  const totalDevices = mobileCount + desktopCount + tabletCount || 1;
+  const uniqueVisitors = new Set(events.map(e => e.visitor_id)).size;
+  const visitorsForEvent = (eventName: AnalyticsEvent['event_name']) =>
+    new Set(events.filter(event => event.event_name === eventName).map(event => event.visitor_id)).size;
+  const uniqueProductViewers = visitorsForEvent('PRODUCT_VIEW');
+  const uniqueCartVisitors = visitorsForEvent('ADD_TO_CART');
+  const uniqueCheckoutVisitors = visitorsForEvent('BEGIN_CHECKOUT');
+  const uniqueOrderVisitors = visitorsForEvent('ORDER_CREATED');
+  const mobileCount = events.filter(e => e.device_type === 'mobile').length;
+  const desktopCount = events.filter(e => e.device_type === 'desktop').length;
+  const tabletCount = events.filter(e => e.device_type === 'tablet').length;
+  const totalDevices = Math.max(1, mobileCount + desktopCount + tabletCount);
 
   // Traffic Sources
-  const fbCount = events.filter(e => e.traffic_source === 'facebook').length || 45;
-  const igCount = events.filter(e => e.traffic_source === 'instagram').length || 38;
-  const googleCount = events.filter(e => e.traffic_source === 'google').length || 22;
-  const directCount = events.filter(e => e.traffic_source === 'direct').length || 21;
-  const totalTraffic = fbCount + igCount + googleCount + directCount || 1;
+  const fbCount = events.filter(e => e.traffic_source === 'facebook').length;
+  const igCount = events.filter(e => e.traffic_source === 'instagram').length;
+  const googleCount = events.filter(e => e.traffic_source === 'google').length;
+  const directCount = events.filter(e => e.traffic_source === 'direct').length;
+  const totalTraffic = Math.max(1, fbCount + igCount + googleCount + directCount);
 
   // Top Viewed Products
-  const topViewedProducts = [...products].sort((a, b) => (b.views_count || 0) - (a.views_count || 0)).slice(0, 5);
-  // Top Requested Products
-  const topRequestedProducts = [...products].sort((a, b) => (b.request_count || 0) - (a.request_count || 0)).slice(0, 5);
+  const productEventCounts = (eventName: AnalyticsEvent['event_name']) => {
+    const counts = new Map<string, number>();
+    for (const event of events) {
+      const productId = event.event_name === eventName ? event.metadata?.product_id : null;
+      if (typeof productId === 'string') counts.set(productId, (counts.get(productId) || 0) + 1);
+    }
+    return counts;
+  };
+  const productViewCounts = productEventCounts('PRODUCT_VIEW');
+  const productCartCounts = productEventCounts('ADD_TO_CART');
+  const topViewedProducts = [...products]
+    .sort((a, b) => (productViewCounts.get(b.id) || 0) - (productViewCounts.get(a.id) || 0))
+    .slice(0, 5);
+  const topRequestedProducts = [...products]
+    .sort((a, b) => (productCartCounts.get(b.id) || 0) - (productCartCounts.get(a.id) || 0))
+    .slice(0, 5);
 
   const getStatusBadge = (status: OrderStatus) => {
     const map: Record<OrderStatus, { label: string; bg: string; color: string }> = {
@@ -93,6 +114,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      {loadError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {loadError}
+        </div>
+      )}
       {/* KPI Cards Grid */}
       <div
         style={{
@@ -232,7 +258,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
           <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1E293B', fontFamily: 'Cairo, sans-serif' }}>
             مسار تحويل الطلبات (Conversion Funnel)
           </h3>
-          <span style={{ fontSize: '0.8rem', color: '#64748B' }}>من الزيارة الأولى حتى إرسال الطلب عبر واتساب</span>
+          <span style={{ fontSize: '0.8rem', color: '#64748B' }}>من الزيارة حتى تسجيل الطلب في قاعدة البيانات</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
@@ -244,26 +270,26 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
 
           <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
             <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>2. تصفح المنتجات</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{totalViews}</div>
-            <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>{Math.round((totalViews / Math.max(1, uniqueVisitors)) * 100)}%</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{uniqueProductViewers}</div>
+            <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>{Math.round((uniqueProductViewers / Math.max(1, uniqueVisitors)) * 100)}%</div>
           </div>
 
           <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
             <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>3. الإضافة للسلة</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{totalRequests + 18}</div>
-            <div style={{ fontSize: '0.7rem', color: '#3B82F6', fontWeight: 700 }}>{Math.round(((totalRequests + 18) / Math.max(1, uniqueVisitors)) * 100)}%</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{uniqueCartVisitors}</div>
+            <div style={{ fontSize: '0.7rem', color: '#3B82F6', fontWeight: 700 }}>{Math.round((uniqueCartVisitors / Math.max(1, uniqueVisitors)) * 100)}%</div>
           </div>
 
           <div style={{ padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>4. إدخال البيانات</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{totalOrders + 3}</div>
-            <div style={{ fontSize: '0.7rem', color: '#8B5CF6', fontWeight: 700 }}>{Math.round(((totalOrders + 3) / Math.max(1, uniqueVisitors)) * 100)}%</div>
+            <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>4. بدء إتمام الطلب</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{uniqueCheckoutVisitors}</div>
+            <div style={{ fontSize: '0.7rem', color: '#8B5CF6', fontWeight: 700 }}>{Math.round((uniqueCheckoutVisitors / Math.max(1, uniqueVisitors)) * 100)}%</div>
           </div>
 
           <div style={{ padding: '12px', backgroundColor: '#ECFDF5', borderRadius: '8px', border: '1px solid #BBF7D0', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: 700 }}>5. إرسال الطلب (WhatsApp)</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#065F46', marginTop: '2px' }}>{totalOrders}</div>
-            <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 800 }}>{((totalOrders / Math.max(1, uniqueVisitors)) * 100).toFixed(1)}% تحويل</div>
+            <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: 700 }}>5. تسجيل الطلب</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#065F46', marginTop: '2px' }}>{uniqueOrderVisitors}</div>
+            <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 800 }}>{((uniqueOrderVisitors / Math.max(1, uniqueVisitors)) * 100).toFixed(1)}% تحويل</div>
           </div>
         </div>
       </div>
@@ -370,7 +396,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
                   </span>
                 </div>
                 <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary-700)', flexShrink: 0 }}>
-                  {p.views_count || 0} مشاهدة
+                  {productViewCounts.get(p.id) || 0} مشاهدة
                 </span>
               </div>
             ))}
@@ -394,7 +420,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
                   </span>
                 </div>
                 <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-600)', flexShrink: 0 }}>
-                  {p.request_count || 0} طلب
+                  {productCartCounts.get(p.id) || 0} إضافة
                 </span>
               </div>
             ))}

@@ -14,6 +14,8 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [operationError, setOperationError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formNameAr, setFormNameAr] = useState('');
   const [formNameEn, setFormNameEn] = useState('');
@@ -68,26 +70,42 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
     setIsModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formNameAr.trim()) return;
 
-    dataStore.saveCategory(
-      {
-        id: editingCategory?.id,
-        name_ar: formNameAr,
-        name_en: formNameEn,
-        slug: formSlug || formNameAr.toLowerCase().replace(/\s+/g, '-'),
-        image_url: formImageUrl,
-        description: formDesc,
-        display_order: Number(formDisplayOrder),
-        is_active: formIsActive,
-        subcategories: formSubcategories
-      },
-      currentUser
-    );
+    setOperationError('');
+    setIsSaving(true);
+    try {
+      await dataStore.saveCategory(
+        {
+          id: editingCategory?.id,
+          name_ar: formNameAr,
+          name_en: formNameEn,
+          slug: formSlug || formNameAr.toLowerCase().replace(/\s+/g, '-'),
+          image_url: formImageUrl,
+          description: formDesc,
+          display_order: Number(formDisplayOrder),
+          is_active: formIsActive,
+          subcategories: formSubcategories
+        },
+        currentUser
+      );
+      setIsModalOpen(false);
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'تعذر حفظ القسم.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-    setIsModalOpen(false);
+  const runCategoryAction = async (action: () => Promise<void>) => {
+    setOperationError('');
+    try {
+      await action();
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'تعذر تنفيذ العملية على القسم.');
+    }
   };
 
   const handleAddSubcategory = () => {
@@ -138,6 +156,11 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {operationError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {operationError}
+        </div>
+      )}
       {/* Action Header */}
       <div
         style={{
@@ -235,7 +258,7 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
                     </button>
                     {cat.is_archived ? (
                       <button
-                        onClick={() => dataStore.restoreCategory(cat.id, currentUser)}
+                        onClick={() => void runCategoryAction(() => dataStore.restoreCategory(cat.id, currentUser))}
                         className="btn btn-ghost btn-sm"
                         style={{ padding: '6px', color: '#059669' }}
                         title="استعادة"
@@ -244,7 +267,7 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
                       </button>
                     ) : (
                       <button
-                        onClick={() => dataStore.archiveCategory(cat.id, currentUser)}
+                        onClick={() => void runCategoryAction(() => dataStore.archiveCategory(cat.id, currentUser))}
                         className="btn btn-ghost btn-sm"
                         style={{ padding: '6px', color: '#D97706' }}
                         title="أرشفة"
@@ -255,7 +278,7 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
                     <button
                       onClick={() => {
                         if (window.confirm('هل تريد حذف هذا القسم نهائياً؟')) {
-                          dataStore.deleteCategory(cat.id, currentUser);
+                          void runCategoryAction(() => dataStore.deleteCategory(cat.id, currentUser));
                         }
                       }}
                       className="btn btn-ghost btn-sm"
@@ -340,6 +363,11 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
             </div>
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {operationError && (
+                <div role="alert" style={{ padding: '10px 12px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px' }}>
+                  {operationError}
+                </div>
+              )}
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '6px' }}>
                   اسم القسم بالعربي <span style={{ color: '#DC2626' }}>*</span>
@@ -559,8 +587,8 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({ currentU
                   <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline">
                     إلغاء
                   </button>
-                  <button type="submit" className="btn btn-primary" style={{ padding: '8px 24px', fontWeight: 800 }}>
-                    حفظ القسم
+                  <button type="submit" disabled={isSaving} className="btn btn-primary" style={{ padding: '8px 24px', fontWeight: 800 }}>
+                    {isSaving ? 'جارٍ الحفظ...' : 'حفظ القسم'}
                   </button>
                 </div>
               </div>

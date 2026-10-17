@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Search,
@@ -6,14 +6,8 @@ import {
   Trash2,
   Archive,
   RotateCcw,
-  Sparkles,
-  Flame,
-  Clock,
-  Eye,
-  Check,
   X,
   Image as ImageIcon,
-  Layers
 } from 'lucide-react';
 import { Product, Category, Brand, PricingMode, AdminUser, ProductSpecification } from '../../types';
 import { dataStore } from '../../services/dataStore';
@@ -71,13 +65,14 @@ interface ProductManagementProps {
 }
 
 export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUser }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [allProducts, setProducts] = useState<Product[]>(() => dataStore.getProducts(true));
+  const [categories, setCategories] = useState<Category[]>(() => dataStore.getCategories());
+  const [brands, setBrands] = useState<Brand[]>(() => dataStore.getBrands());
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showArchived, setShowArchived] = useState(false);
+  const products = showArchived ? allProducts : allProducts.filter((product) => !product.is_archived);
 
   // Edit / Add Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -101,6 +96,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [formError, setFormError] = useState('');
+  const [operationError, setOperationError] = useState('');
   const [formPrimaryImgIdx, setFormPrimaryImgIdx] = useState(0);
   const [formIsFeatured, setFormIsFeatured] = useState(false);
   const [formIsNew, setFormIsNew] = useState(true);
@@ -110,16 +106,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
   const [newSpecKey, setNewSpecKey] = useState('');
   const [newSpecVal, setNewSpecVal] = useState('');
 
-  useEffect(() => {
-    refreshData();
-    return dataStore.subscribe(refreshData);
-  }, [showArchived]);
-
-  const refreshData = () => {
-    setProducts(dataStore.getProducts(showArchived));
+  const refreshData = useCallback(() => {
+    setProducts(dataStore.getProducts(true));
     setCategories(dataStore.getCategories());
     setBrands(dataStore.getBrands());
-  };
+  }, []);
+
+  useEffect(() => dataStore.subscribe(refreshData), [refreshData]);
 
   const openAddModal = () => {
     setEditingProduct(null);
@@ -264,17 +257,26 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
     setFormSpecs(formSpecs.filter((_, i) => i !== idx));
   };
 
+  const runProductAction = async (action: () => Promise<void>) => {
+    setOperationError('');
+    try {
+      await action();
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'تعذر تنفيذ العملية على المنتج.');
+    }
+  };
+
   const handleArchive = (id: string) => {
-    dataStore.archiveProduct(id, currentUser);
+    void runProductAction(() => dataStore.archiveProduct(id, currentUser));
   };
 
   const handleRestore = (id: string) => {
-    dataStore.restoreProduct(id, currentUser);
+    void runProductAction(() => dataStore.restoreProduct(id, currentUser));
   };
 
   const handleDelete = (id: string) => {
     if (window.confirm('هل أنت متأكد من حذف هذا المنتج نهائياً من قاعدة البيانات؟')) {
-      dataStore.deleteProduct(id, currentUser);
+      void runProductAction(() => dataStore.deleteProduct(id, currentUser));
     }
   };
 
@@ -298,6 +300,11 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ currentUse
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {operationError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {operationError}
+        </div>
+      )}
       {/* Top Action Bar */}
       <div
         style={{

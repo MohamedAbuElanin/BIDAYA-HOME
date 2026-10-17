@@ -35,6 +35,8 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ currentUser })
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<OrderStatus>('new');
   const [statusNote, setStatusNote] = useState('');
+  const [statusUpdateError, setStatusUpdateError] = useState('');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const unsubscribe = dataStore.subscribe(refresh);
@@ -59,19 +61,26 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ currentUser })
     setStatusNote('');
   };
 
-  const handleUpdateStatus = (e: React.FormEvent) => {
+  const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedOrder) return;
 
-    const updated = dataStore.updateOrderStatus(
-      selectedOrder.id,
-      newStatus,
-      statusNote,
-      currentUser
-    );
-
-    setSelectedOrder(updated);
-    setStatusNote('');
+    setIsUpdatingStatus(true);
+    setStatusUpdateError('');
+    try {
+      const updated = await dataStore.updateOrderStatus(
+        selectedOrder.id,
+        newStatus,
+        statusNote,
+        currentUser
+      );
+      setSelectedOrder(updated);
+      setStatusNote('');
+    } catch (error) {
+      setStatusUpdateError(error instanceof Error ? error.message : 'تعذر تحديث حالة الطلب.');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const handleDirectCustomerWhatsApp = (order: Order) => {
@@ -470,6 +479,11 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ currentUser })
               <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1E293B', marginBottom: '10px' }}>
                 تحديث حالة الطلب
               </h4>
+              {statusUpdateError && (
+                <div role="alert" style={{ marginBottom: '10px', padding: '10px 12px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px' }}>
+                  {statusUpdateError}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '10px', alignItems: 'center' }}>
                 <select
                   value={newStatus}
@@ -493,8 +507,8 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ currentUser })
                   style={{ padding: '8px 12px', borderRadius: '6px', border: '1.5px solid #CBD5E1', fontSize: '0.85rem' }}
                 />
 
-                <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '8px 16px', fontWeight: 700 }}>
-                  تحديث الحالة
+                <button type="submit" disabled={isUpdatingStatus} className="btn btn-primary btn-sm" style={{ padding: '8px 16px', fontWeight: 700 }}>
+                  {isUpdatingStatus ? 'جارٍ التحديث...' : 'تحديث الحالة'}
                 </button>
               </div>
             </form>

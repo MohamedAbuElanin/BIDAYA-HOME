@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { History, Shield, User, Clock, Filter } from 'lucide-react';
 import { ActivityLog } from '../../types';
 import { dataStore } from '../../services/dataStore';
 
 export const ActivityLogs: React.FC = () => {
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [logs, setLogs] = useState<ActivityLog[]>(() => dataStore.getActivityLogs());
   const [filterType, setFilterType] = useState('all');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    setLogs(dataStore.getActivityLogs());
+    void dataStore.refreshActivityLogsFromDatabase().then(() => {
+      setLogs(dataStore.getActivityLogs());
+      setLoadError('');
+    }).catch((error: unknown) => {
+      setLoadError(error instanceof Error ? error.message : 'تعذر تحميل سجل العمليات.');
+    });
     return dataStore.subscribe(() => {
       setLogs(dataStore.getActivityLogs());
     });
@@ -21,6 +26,11 @@ export const ActivityLogs: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {loadError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {loadError}
+        </div>
+      )}
       {/* Header */}
       <div
         style={{

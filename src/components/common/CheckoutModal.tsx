@@ -16,10 +16,10 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../../context/CartContext';
-import { EGYPTIAN_GOVERNORATES, getDeliveryFeeByGov } from '../../data/egyptianGovernorates';
 import { submitCheckout } from '../../services/checkout';
 import { getWhatsAppChatUrl, getWhatsAppCheckoutDraftUrl, formatWhatsAppMessage, formatPaymentMethodName } from '../../services/whatsapp';
 import { analytics } from '../../services/analytics';
+import { dataStore } from '../../services/dataStore';
 import { Order, CustomerInfo, DepositPaymentMethod, RemainingPaymentMethod } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 import { captureAppException } from '../../lib/posthog';
@@ -50,11 +50,19 @@ export const CheckoutModal: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [submissionDiagnostic, setSubmissionDiagnostic] = useState<string | null>(null);
+  const [governorates, setGovernorates] = useState(dataStore.getDeliveryZones());
+  const [deliveryZonesError, setDeliveryZonesError] = useState('');
 
   // Lock body scroll when modal is open
   useEffect(() => {
     if (isCheckoutOpen) {
       document.body.style.overflow = 'hidden';
+      void dataStore.refreshDeliveryZonesFromDatabase().then(() => {
+        setGovernorates(dataStore.getDeliveryZones());
+        setDeliveryZonesError('');
+      }).catch((error: unknown) => {
+        setDeliveryZonesError(error instanceof Error ? error.message : 'تعذر تحميل بيانات التوصيل.');
+      });
     } else {
       document.body.style.overflow = '';
     }
@@ -66,8 +74,8 @@ export const CheckoutModal: React.FC = () => {
   if (!isCheckoutOpen) return null;
 
   // Selected governorate data & Delivery fee
-  const currentGov = EGYPTIAN_GOVERNORATES.find(g => g.name_ar === formData.governorate);
-  const deliveryFeeInfo = getDeliveryFeeByGov(formData.governorate);
+  const currentGov = governorates.find(g => g.name_ar === formData.governorate);
+  const deliveryFeeInfo = dataStore.getDeliveryFeeInfo(formData.governorate);
   const deliveryFeeDisplay = lang === 'ar' ? deliveryFeeInfo.textAr : deliveryFeeInfo.textEn;
 
   // Dynamic 50% / 50% payment calculation
@@ -148,8 +156,7 @@ export const CheckoutModal: React.FC = () => {
     setSubmissionDiagnostic(null);
     let whatsappWindow: Window | null = null;
 
-    // Stage 1: Record submit intent before any persistence.
-    // This fires even if createOrder() later throws.
+    // Record the user's submit intent before calling the trusted checkout function.
     analytics.track('ORDER_SUBMIT_ATTEMPT', {
       items_count: items.length,
       total_estimate: totalAmount,
@@ -225,12 +232,6 @@ export const CheckoutModal: React.FC = () => {
       console.error('Order submission failed:', err);
       const diagnostic = err instanceof Error ? err.message : String(err);
       setSubmissionDiagnostic(diagnostic);
-      const draftUrl = getWhatsAppCheckoutDraftUrl(
-        formData,
-        items,
-        depositMethod as DepositPaymentMethod,
-        remainingMethod as RemainingPaymentMethod,
-      );
       if (whatsappWindow && !whatsappWindow.closed) whatsappWindow.close();
       setSubmissionError(tx(t.checkout.submitFailed));
       captureAppException(err, {
@@ -337,6 +338,11 @@ export const CheckoutModal: React.FC = () => {
 
         {/* Content */}
         <div style={{ padding: '24px' }}>
+          {deliveryZonesError && (
+            <div role="alert" style={{ marginBottom: '16px', padding: '12px 14px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px' }}>
+              {deliveryZonesError}
+            </div>
+          )}
           {createdOrder ? (
             /* SUCCESS CELEBRATION VIEW */
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -616,7 +622,7 @@ export const CheckoutModal: React.FC = () => {
                       }}
                     >
                       <option value="">{tx(t.checkout.selectGov)}</option>
-                      {EGYPTIAN_GOVERNORATES.map((gov) => (
+                      {governorates.map((gov) => (
                         <option key={gov.id} value={gov.name_ar}>
                           {lang === 'en' ? gov.name_en : gov.name_ar}
                         </option>

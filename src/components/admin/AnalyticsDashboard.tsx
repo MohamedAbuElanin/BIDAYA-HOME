@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  BarChart3,
-  Users,
-  Eye,
-  ShoppingBag,
-  MessageCircle,
   MapPin,
-  Smartphone,
-  Globe,
   Activity,
   ArrowDown
 } from 'lucide-react';
@@ -15,36 +8,33 @@ import { AnalyticsEvent } from '../../types';
 import { dataStore } from '../../services/dataStore';
 
 export const AnalyticsDashboard: React.FC = () => {
-  const [events, setEvents] = useState<AnalyticsEvent[]>([]);
+  const [events, setEvents] = useState<AnalyticsEvent[]>(() => dataStore.getAnalyticsEvents());
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    setEvents(dataStore.getAnalyticsEvents());
+    void dataStore.refreshAnalyticsFromDatabase().then(() => {
+      setEvents(dataStore.getAnalyticsEvents());
+      setLoadError('');
+    }).catch((error: unknown) => {
+      setLoadError(error instanceof Error ? error.message : 'تعذر تحميل التحليلات.');
+    });
     return dataStore.subscribe(() => {
       setEvents(dataStore.getAnalyticsEvents());
     });
   }, []);
 
   const totalEvents = events.length;
-  const uniqueVisitors = new Set(events.map((e) => e.visitor_id)).size || 126;
+  const uniqueVisitors = new Set(events.map((e) => e.visitor_id)).size;
 
   // Event counts
-  const pageViews = events.filter((e) => e.event_name === 'PAGE_VIEW').length || 240;
-  const productViews = events.filter((e) => e.event_name === 'PRODUCT_VIEW').length || 180;
-  const cartAdds = events.filter((e) => e.event_name === 'ADD_TO_CART').length || 45;
-  const checkouts = events.filter((e) => e.event_name === 'BEGIN_CHECKOUT').length || 28;
-  const orders = events.filter((e) => e.event_name === 'ORDER_CREATED' || e.event_name === 'WHATSAPP_CLICK').length || 16;
+  const pageViews = events.filter((e) => e.event_name === 'PAGE_VIEW').length;
+  const productViews = events.filter((e) => e.event_name === 'PRODUCT_VIEW').length;
+  const cartAdds = events.filter((e) => e.event_name === 'ADD_TO_CART').length;
+  const checkouts = events.filter((e) => e.event_name === 'BEGIN_CHECKOUT').length;
+  const orders = events.filter((e) => e.event_name === 'ORDER_CREATED').length;
 
   // Approximate Governorates Breakdown
-  const govCounts: Record<string, number> = {
-    'القاهرة': 48,
-    'الجيزة': 32,
-    'الإسكندرية': 24,
-    'القليوبية': 14,
-    'الشرقية': 12,
-    'الدقهلية (المنصورة)': 9,
-    'الغربية (طنطا)': 8,
-    'باقي المحافظات': 15
-  };
+  const govCounts: Record<string, number> = {};
 
   events.forEach((e) => {
     if (e.location_governorate) {
@@ -52,10 +42,15 @@ export const AnalyticsDashboard: React.FC = () => {
     }
   });
 
-  const totalGovHits = Object.values(govCounts).reduce((a, b) => a + b, 0);
+  const totalGovHits = Math.max(1, Object.values(govCounts).reduce((a, b) => a + b, 0));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      {loadError && (
+        <div role="alert" style={{ padding: '12px 16px', borderRadius: '8px', color: '#991B1B', backgroundColor: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {loadError}
+        </div>
+      )}
       {/* Overview Stat Row */}
       <div
         style={{
@@ -69,7 +64,7 @@ export const AnalyticsDashboard: React.FC = () => {
           <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#1E293B', marginTop: '4px', fontFamily: 'Cairo, sans-serif' }}>
             {totalEvents}
           </div>
-          <div style={{ fontSize: '0.72rem', color: '#10B981', marginTop: '4px' }}>نشط وتتبع فوري للزيارات</div>
+          <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px' }}>آخر {totalEvents} حدث محمّل</div>
         </div>
 
         <div style={{ backgroundColor: '#FFFFFF', padding: '18px', borderRadius: 'var(--radius-lg)', border: '1px solid #E2E8F0' }}>
@@ -89,7 +84,7 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         <div style={{ backgroundColor: '#FFFFFF', padding: '18px', borderRadius: 'var(--radius-lg)', border: '1px solid #E2E8F0' }}>
-          <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>طلبات الواتساب المكتملة</div>
+          <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>الطلبات المسجلة</div>
           <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#047857', marginTop: '4px', fontFamily: 'Cairo, sans-serif' }}>
             {orders}
           </div>
@@ -111,7 +106,9 @@ export const AnalyticsDashboard: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {Object.entries(govCounts).map(([gov, count]) => {
+            {Object.entries(govCounts).length === 0 ? (
+              <p style={{ margin: 0, color: '#64748B', fontSize: '0.85rem' }}>لا توجد بيانات جغرافية مسجلة بعد.</p>
+            ) : Object.entries(govCounts).map(([gov, count]) => {
               const pct = Math.round((count / totalGovHits) * 100);
               return (
                 <div key={gov}>
@@ -170,8 +167,18 @@ export const AnalyticsDashboard: React.FC = () => {
 
             <div style={{ padding: '10px 14px', backgroundColor: '#ECFDF5', borderRadius: '8px', border: '1px solid #A7F3D0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#047857' }}>4. إرسال الطلب عبر واتساب</div>
-                <div style={{ fontSize: '0.75rem', color: '#065F46' }}>Order Sent to WhatsApp</div>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>4. بدء إتمام الطلب</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Begin Checkout</div>
+              </div>
+              <span style={{ fontWeight: 800, fontSize: '1.1rem' }}>{checkouts}</span>
+            </div>
+
+            <div style={{ textAlign: 'center', color: '#94A3B8' }}><ArrowDown size={16} /></div>
+
+            <div style={{ padding: '10px 14px', backgroundColor: '#ECFDF5', borderRadius: '8px', border: '1px solid #A7F3D0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#047857' }}>5. تسجيل الطلب</div>
+                <div style={{ fontSize: '0.75rem', color: '#065F46' }}>Persisted Orders</div>
               </div>
               <span style={{ fontWeight: 900, fontSize: '1.25rem', color: '#047857' }}>{orders}</span>
             </div>
@@ -182,7 +189,7 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* Real-time Event Stream */}
       <div style={{ backgroundColor: '#FFFFFF', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid #E2E8F0', boxShadow: 'var(--shadow-xs)' }}>
         <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#1E293B', marginBottom: '14px', fontFamily: 'Cairo, sans-serif' }}>
-          سجل أحداث الزوار المباشرة (Event Stream)
+          أحدث أحداث الزوار المسجلة (Event Stream)
         </h3>
 
         <div style={{ overflowX: 'auto' }}>
@@ -204,11 +211,11 @@ export const AnalyticsDashboard: React.FC = () => {
                     {evt.event_name}
                   </td>
                   <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: '#64748B' }}>
-                    {evt.visitor_id.substring(0, 12)}...
+                    {evt.session_id.substring(0, 12)}...
                   </td>
                   <td style={{ padding: '8px 12px' }}>{evt.device_type}</td>
                   <td style={{ padding: '8px 12px' }}>{evt.traffic_source}</td>
-                  <td style={{ padding: '8px 12px' }}>{evt.location_governorate || 'القاهرة'}</td>
+                  <td style={{ padding: '8px 12px' }}>{evt.location_governorate || '—'}</td>
                   <td style={{ padding: '8px 12px', color: '#94A3B8' }}>
                     {new Date(evt.timestamp).toLocaleTimeString('ar-EG')}
                   </td>
