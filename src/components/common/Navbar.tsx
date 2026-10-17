@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShoppingBag,
   Search,
@@ -42,6 +42,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
   const [isCategoriesDropdownOpen, setIsCategoriesDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const lastScrollY = useRef(0);
+  const scrollDelta = useRef(0);
 
   useEffect(() => {
     return dataStore.subscribe(() => {
@@ -49,6 +52,33 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
       setCategories(dataStore.getCategories());
     });
   }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY.current;
+
+      if (currentScrollY < 80 || isMobileMenuOpen) {
+        setIsHeaderHidden(false);
+        scrollDelta.current = 0;
+      } else if (delta !== 0) {
+        if (Math.sign(delta) !== Math.sign(scrollDelta.current)) {
+          scrollDelta.current = 0;
+        }
+        scrollDelta.current += delta;
+
+        if (scrollDelta.current > 8) setIsHeaderHidden(true);
+        if (scrollDelta.current < -8) setIsHeaderHidden(false);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    lastScrollY.current = window.scrollY;
+    scrollDelta.current = 0;
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isMobileMenuOpen]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,13 +104,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
     : tx(t.general.slogan);
 
   return (
-    <header className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 800 }}>
+    <header className={`glass-nav${isHeaderHidden && !isMobileMenuOpen ? ' is-hidden-mobile' : ''}`} style={{ position: 'sticky', top: 0, zIndex: 800 }}>
       {/* Main Navbar Bar */}
-      <div className="container" style={{ padding: '12px 16px' }}>
+      <div className="container navbar-main-container" style={{ padding: '12px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
 
           {/* Logo & Slogan */}
           <div
+            className="navbar-brand"
             onClick={() => onNavigate('home')}
             style={{
               display: 'flex',
@@ -91,6 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
             }}
           >
             <img
+              className="navbar-logo"
               src="/Logo/Icon - Mark.svg"
               alt={lang === 'ar' ? 'شعار بداية هوم' : 'Bidaya Home logo'}
               style={{
@@ -102,11 +134,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
             />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary-900)', fontFamily: lang === 'ar' ? 'Cairo, sans-serif' : 'var(--font-latin)', letterSpacing: '0' }}>
+                <span className="navbar-brand-name" style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary-900)', fontFamily: lang === 'ar' ? 'Cairo, sans-serif' : 'var(--font-latin)', letterSpacing: '0' }}>
                   {storeName}
                 </span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+              <div className="navbar-slogan" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500 }}>
                 {slogan}
               </div>
             </div>
@@ -163,11 +195,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
           </form>}
 
           {/* Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 1vw, 10px)' }}>
+          <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 1vw, 10px)' }}>
             <button
               type="button"
               onClick={() => onNavigate('wishlist')}
               className="btn btn-ghost"
+              data-navbar-action
               title={lang === 'ar' ? 'المفضلة' : 'Wishlist'}
               aria-label={lang === 'ar' ? 'المفضلة' : 'Wishlist'}
               style={{ position: 'relative', padding: '8px' }}
@@ -179,6 +212,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
               type="button"
               onClick={() => onNavigate('compare')}
               className="btn btn-ghost"
+              data-navbar-action
               title={lang === 'ar' ? 'مقارنة المنتجات' : 'Compare products'}
               aria-label={lang === 'ar' ? 'مقارنة المنتجات' : 'Compare products'}
               style={{ position: 'relative', padding: '8px' }}
@@ -190,6 +224,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
               type="button"
               onClick={toggleLanguage}
               className="btn btn-outline"
+              data-navbar-language
               title={tx(t.general.switchToEn)}
               aria-label={tx(t.general.switchToEn)}
               style={{
@@ -210,6 +245,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
             <button
               onClick={openCart}
               className="btn btn-outline"
+              data-navbar-action
               style={{
                 position: 'relative',
                 padding: '8px clamp(8px, 2vw, 16px)',
@@ -248,8 +284,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
             </button>
 
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={() => {
+                setIsMobileMenuOpen(!isMobileMenuOpen);
+                setIsHeaderHidden(false);
+              }}
               className="btn btn-ghost"
+              data-navbar-menu
               style={{ padding: '8px' }}
               aria-label={tx(t.nav.home)}
             >
@@ -748,6 +788,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
           .desktop-search-form { display: block !important; }
           .desktop-nav-bar { display: flex !important; }
           .desktop-cart-label { display: inline !important; }
+        }
+
+        @media (max-width: 859px) {
+          .glass-nav { transition: transform 220ms ease; }
+          .glass-nav.is-hidden-mobile { transform: translateY(-100%); }
+          .navbar-main-container { padding: 7px 10px !important; }
+          .navbar-brand { gap: 8px !important; }
+          .navbar-logo { width: 36px !important; height: 36px !important; }
+          .navbar-brand-name { font-size: 1.05rem !important; }
+          .navbar-slogan { font-size: 0.6rem !important; }
+          .navbar-actions { gap: 2px !important; }
+          [data-navbar-action], [data-navbar-menu] { padding: 5px !important; }
+          [data-navbar-action] svg, [data-navbar-menu] svg { width: 18px; height: 18px; }
+          [data-navbar-language] { padding: 5px 6px !important; font-size: 0.7rem !important; }
+          [data-navbar-language] svg { width: 15px; height: 15px; }
         }
       `}</style>
     </header>
