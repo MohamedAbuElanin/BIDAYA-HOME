@@ -67,8 +67,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
         }
         scrollDelta.current += delta;
 
-        if (scrollDelta.current > 8) setIsHeaderHidden(true);
-        if (scrollDelta.current < -8) setIsHeaderHidden(false);
+        if (scrollDelta.current > 28) setIsHeaderHidden(true);
+        if (scrollDelta.current < -20) setIsHeaderHidden(false);
       }
 
       lastScrollY.current = currentScrollY;
@@ -791,7 +791,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onSear
         }
 
         @media (max-width: 859px) {
-          .glass-nav { transition: transform 220ms ease; }
+          .glass-nav { transition: transform 320ms ease; }
           .glass-nav.is-hidden-mobile { transform: translateY(-100%); }
           .navbar-main-container { padding: 7px 10px !important; }
           .navbar-brand { gap: 8px !important; }

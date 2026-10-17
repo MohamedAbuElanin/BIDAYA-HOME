@@ -105,10 +105,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, on
         padding: '16px',
         overflowY: 'auto'
       }}
-      onClick={onClose}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: 'var(--radius-xl)',

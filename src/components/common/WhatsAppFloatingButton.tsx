@@ -29,17 +29,18 @@ export const WhatsAppFloatingButton: React.FC = () => {
         onClick={handleClick}
         className="pulse-whatsapp"
         title={lang === 'en' ? 'Contact us directly on WhatsApp' : 'تواصل معنا مباشرة عبر واتساب'}
+        aria-label={lang === 'en' ? 'Order on WhatsApp' : 'اطلب عبر واتساب'}
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          justifyContent: 'center',
           backgroundColor: '#25D366',
           color: '#ffffff',
           border: 'none',
-          padding: '12px 18px',
+          width: '52px',
+          height: '52px',
+          padding: 0,
           borderRadius: '50px',
-          fontWeight: 700,
-          fontSize: '0.95rem',
           cursor: 'pointer',
           boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4)',
           transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -52,7 +53,6 @@ export const WhatsAppFloatingButton: React.FC = () => {
         }}
       >
         <MessageCircle size={22} />
-        <span>{lang === 'en' ? 'Order on WhatsApp' : 'اطلب عبر واتساب'}</span>
       </button>
     </div>
   );

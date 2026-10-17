@@ -271,10 +271,8 @@ export const CheckoutModal: React.FC = () => {
         padding: '16px',
         overflowY: 'auto'
       }}
-      onClick={closeCheckout}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#FFFFFF',
           borderRadius: 'var(--radius-xl)',
@@ -468,14 +466,6 @@ export const CheckoutModal: React.FC = () => {
                 >
                   {copied ? <Check size={18} color="#16A34A" /> : <Copy size={18} />}
                   <span>{copied ? tx(t.checkout.copiedMessage) : tx(t.checkout.copyOrder)}</span>
-                </button>
-
-                <button
-                  onClick={closeCheckout}
-                  className="btn btn-ghost"
-                  style={{ marginTop: '8px' }}
-                >
-                  {tx(t.checkout.continueShopping)}
                 </button>
               </div>
             </div>
